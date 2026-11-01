@@ -1,0 +1,11 @@
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Node / Scratch scripts
+*.log
+test_*.js
+check_*.js
+add_*.js
+expand_*.js
