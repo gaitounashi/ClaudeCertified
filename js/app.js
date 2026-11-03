@@ -542,7 +542,7 @@ function renderPracticeView(container) {
 
   let html = `
     <div class="view-hero">
-      <span class="view-hero-badge">Question Bank (全${QUESTIONS_DATA.length}問・各試験60問)</span>
+      <span class="view-hero-badge">Question Bank (全${QUESTIONS_DATA.length}問・各試験70問)</span>
       <h2>Claude認定 資格別 実践問題集</h2>
       <p>本番同様のシナリオ問題、XMLプロンプト、エージェント設計、MCP、ガバナンスを徹底演習。全問に公式ドキュメント準拠の詳細解説と引っかけ対策付き。</p>
     </div>
