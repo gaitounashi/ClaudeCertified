@@ -14,6 +14,7 @@ const AppState = {
     search: ''
   },
   userAnswers: {}, // { questionId: { selected: [indexes], isCorrect: bool, timestamp: number } }
+  pendingSelections: {}, // { questionId: [selectedIndexes] } for multi-choice
   bookmarks: new Set(),
   weaknesses: new Set(),
   readChapters: new Set(), // Set of chapterIds marked as read
@@ -644,6 +645,8 @@ function renderQuestionCard(q, displayIndex) {
   const answerState = AppState.userAnswers[q.id];
   const isAnswered = !!answerState;
   const isBookmarked = AppState.bookmarks.has(q.id);
+  const isMulti = q.type === 'multiple' || q.answer.length > 1;
+  const pending = AppState.pendingSelections[q.id] || [];
 
   return `
     <div class="question-card" id="qcard-${q.id}">
@@ -657,8 +660,8 @@ function renderQuestionCard(q, displayIndex) {
           ` : ''}
           <span class="badge-category">${q.category}</span>
           <span class="badge-difficulty diff-${q.difficulty}">${q.difficulty}</span>
-          <span style="font-size: 11px; color: var(--text-muted); font-weight: 600;">
-            ${q.type === 'multiple' ? '【複数選択問題】' : '【単一選択問題】'}
+          <span style="font-size: 11px; color: ${isMulti ? 'var(--accent-primary)' : 'var(--text-muted)'}; font-weight: 700;">
+            ${isMulti ? `【複数選択問題（${q.answer.length}つ選択）】` : '【単一選択問題】'}
           </span>
         </div>
         <div class="question-actions">
@@ -688,6 +691,10 @@ function renderQuestionCard(q, displayIndex) {
             } else if (isUserSelected && !isCorrectOption) {
               itemClass += " incorrect";
             }
+          } else if (isMulti) {
+            if (pending.includes(optIdx)) {
+              itemClass += " selected";
+            }
           }
 
           return `
@@ -698,6 +705,18 @@ function renderQuestionCard(q, displayIndex) {
           `;
         }).join('')}
       </div>
+
+      ${!isAnswered && isMulti ? `
+        <div style="margin-top: 14px; display: flex; justify-content: space-between; align-items: center; background: var(--bg-secondary); padding: 10px 16px; border-radius: var(--radius-md); border: 1px dashed var(--border-subtle);">
+          <span style="font-size: 13px; color: var(--text-secondary);">
+            選択中: <strong style="color: var(--accent-primary);">${pending.length}</strong> / ${q.answer.length}
+          </span>
+          <button class="btn-primary" style="font-size: 13px; padding: 6px 16px; ${pending.length === q.answer.length ? '' : 'opacity: 0.5; cursor: not-allowed;'}" 
+            ${pending.length === q.answer.length ? `onclick="submitMultiAnswer('${q.id}')"` : 'disabled'}>
+            回答を確定する
+          </button>
+        </div>
+      ` : ''}
 
       ${isAnswered ? `
         <div class="explanation-box">
@@ -731,6 +750,27 @@ function handleOptionSelect(questionId, optionIdx) {
   // If already answered, do nothing
   if (AppState.userAnswers[questionId]) return;
 
+  const isMulti = q.type === 'multiple' || q.answer.length > 1;
+
+  if (isMulti) {
+    if (!AppState.pendingSelections[questionId]) {
+      AppState.pendingSelections[questionId] = [];
+    }
+    const cur = AppState.pendingSelections[questionId];
+    if (cur.includes(optionIdx)) {
+      AppState.pendingSelections[questionId] = cur.filter(i => i !== optionIdx);
+    } else {
+      if (cur.length < q.answer.length) {
+        AppState.pendingSelections[questionId] = [...cur, optionIdx];
+      } else {
+        AppState.pendingSelections[questionId] = [...cur.slice(1), optionIdx];
+      }
+    }
+    reRenderQuestionCard(q);
+    return;
+  }
+
+  // Single choice: evaluate immediately
   const selected = [optionIdx];
   const isCorrect = q.answer.length === 1 && q.answer[0] === optionIdx;
 
@@ -748,9 +788,41 @@ function handleOptionSelect(questionId, optionIdx) {
 
   saveLocalStorage();
   updateProgressUI();
+  reRenderQuestionCard(q);
+}
 
-  // Re-render single question card
-  const card = document.getElementById(`qcard-${questionId}`);
+function submitMultiAnswer(questionId) {
+  const q = QUESTIONS_DATA.find(item => item.id === questionId);
+  if (!q) return;
+  if (AppState.userAnswers[questionId]) return;
+
+  const selected = AppState.pendingSelections[questionId] || [];
+  if (selected.length !== q.answer.length) return;
+
+  const isCorrect = selected.length === q.answer.length &&
+    q.answer.every(idx => selected.includes(idx));
+
+  AppState.userAnswers[questionId] = {
+    selected: [...selected].sort((a, b) => a - b),
+    isCorrect: isCorrect,
+    timestamp: Date.now()
+  };
+
+  delete AppState.pendingSelections[questionId];
+
+  if (!isCorrect) {
+    AppState.weaknesses.add(questionId);
+  } else {
+    AppState.weaknesses.delete(questionId);
+  }
+
+  saveLocalStorage();
+  updateProgressUI();
+  reRenderQuestionCard(q);
+}
+
+function reRenderQuestionCard(q) {
+  const card = document.getElementById(`qcard-${q.id}`);
   if (card) {
     const parent = card.parentElement;
     const cards = Array.from(parent.querySelectorAll('.question-card'));
@@ -761,6 +833,7 @@ function handleOptionSelect(questionId, optionIdx) {
 
 function retryQuestion(questionId) {
   delete AppState.userAnswers[questionId];
+  delete AppState.pendingSelections[questionId];
   saveLocalStorage();
   updateProgressUI();
   renderApp();
@@ -926,6 +999,9 @@ function renderActiveMockExam(container) {
           <div class="question-meta">
             <span class="badge-category">${q.category}</span>
             <span class="badge-difficulty diff-${q.difficulty}">${q.difficulty}</span>
+            <span style="font-size: 11px; color: ${q.answer.length > 1 ? 'var(--accent-primary)' : 'var(--text-muted)'}; font-weight: 700;">
+              ${q.answer.length > 1 ? `【複数選択問題（${q.answer.length}つ選択）】` : '【単一選択問題】'}
+            </span>
           </div>
           <button class="btn-secondary" style="font-size: 12px; padding: 6px 12px; color: ${isFlagged ? '#ecc94b' : 'inherit'};" onclick="toggleMockFlag('${q.id}')">
             ${Icons.flag} ${isFlagged ? '見直しフラグ解除' : '見直しフラグを付ける'}
@@ -1004,7 +1080,26 @@ function renderActiveMockExam(container) {
 }
 
 function selectMockOption(questionId, optIdx) {
-  AppState.mockExam.answers[questionId] = [optIdx];
+  const mock = AppState.mockExam;
+  const q = mock.questions.find(item => item.id === questionId);
+  if (!q) return;
+
+  const isMulti = q.type === 'multiple' || q.answer.length > 1;
+  const current = mock.answers[questionId] || [];
+
+  if (isMulti) {
+    if (current.includes(optIdx)) {
+      mock.answers[questionId] = current.filter(i => i !== optIdx);
+    } else {
+      if (current.length < q.answer.length) {
+        mock.answers[questionId] = [...current, optIdx].sort((a, b) => a - b);
+      } else {
+        mock.answers[questionId] = [...current.slice(1), optIdx].sort((a, b) => a - b);
+      }
+    }
+  } else {
+    mock.answers[questionId] = [optIdx];
+  }
   renderApp();
 }
 
@@ -1048,7 +1143,8 @@ function submitMockExam() {
 
   mock.questions.forEach(q => {
     const userSelected = mock.answers[q.id] || [];
-    const isCorrect = userSelected.length === 1 && q.answer.includes(userSelected[0]);
+    const isCorrect = userSelected.length === q.answer.length &&
+      q.answer.every(idx => userSelected.includes(idx));
 
     if (isCorrect) correctCount++;
     details.push({
