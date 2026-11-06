@@ -125,10 +125,10 @@ function setupEventListeners() {
     themeBtn.addEventListener('click', toggleTheme);
   }
 
-  // Reset progress
+  // Reset progress modal
   const resetBtn = document.getElementById('resetProgressBtn');
   if (resetBtn) {
-    resetBtn.addEventListener('click', confirmResetProgress);
+    resetBtn.addEventListener('click', openResetModal);
   }
 
   // Search input
@@ -151,18 +151,162 @@ function toggleTheme() {
   saveLocalStorage();
 }
 
-// Reset Progress
-function confirmResetProgress() {
-  if (confirm('すべての学習履歴、ブックマーク、模擬試験の結果をリセットしますか？')) {
+// ==========================================================================
+// Progress Reset & Modal Management (Exam-specific & Full Reset)
+// ==========================================================================
+
+// Open Reset Modal
+function openResetModal() {
+  const modal = document.getElementById('resetProgressModal');
+  if (!modal) return;
+  renderResetModalContent();
+  modal.classList.add('open');
+}
+
+// Close Reset Modal
+function closeResetModal() {
+  const modal = document.getElementById('resetProgressModal');
+  if (modal) modal.classList.remove('open');
+}
+
+// Handle Overlay Click
+function handleModalOverlayClick(e) {
+  if (e.target && e.target.id === 'resetProgressModal') {
+    closeResetModal();
+  }
+}
+
+// Render Modal Content
+function renderResetModalContent() {
+  const body = document.getElementById('resetModalBody');
+  if (!body) return;
+
+  const exams = [
+    { code: 'CCDV-F', title: 'CCDV-F (Developer Foundations)', desc: 'API / MCP / Tool Use / Caching' },
+    { code: 'CCAO-F', title: 'CCAO-F (Associate Foundations)', desc: 'プロンプト / 活用 / ガバナンス' },
+    { code: 'CCAR-F', title: 'CCAR-F (Architect Foundations)', desc: 'エージェント5大設計 / RAG / 耐障害性' },
+    { code: 'CCAR-P', title: 'CCAR-P (Architect Professional)', desc: 'マルチクラウド / 評価パイプライン / 安全性' },
+    { code: 'minorun', title: '🔥 みのるん式特訓', desc: 'CCAR-F 引っかけ・落とし穴特訓 18問' }
+  ];
+
+  let html = `
+    <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 6px;">
+      再挑戦したい試験の「解いた問題の履歴」を一式リセットできます。<br>
+      ※対象試験の解答データ・正誤判定が初期化されます（ブックマークや教本読了状態は保持されます）。
+    </p>
+  `;
+
+  exams.forEach(item => {
+    let questions = [];
+    if (item.code === 'minorun') {
+      questions = QUESTIONS_DATA.filter(q => q.specialTag === 'みのるん式特訓');
+    } else {
+      questions = QUESTIONS_DATA.filter(q => q.exam === item.code);
+    }
+    const totalCount = questions.length;
+    const answeredCount = questions.filter(q => AppState.userAnswers[q.id]).length;
+    const correctCount = questions.filter(q => AppState.userAnswers[q.id]?.isCorrect).length;
+    const accuracy = answeredCount > 0 ? Math.round((correctCount / answeredCount) * 100) : 0;
+    const pct = totalCount > 0 ? Math.round((answeredCount / totalCount) * 100) : 0;
+
+    html += `
+      <div class="reset-exam-card">
+        <div class="reset-exam-info">
+          <div class="reset-exam-title">
+            <span>${item.title}</span>
+          </div>
+          <div class="reset-exam-stats">
+            解答進捗: <strong>${answeredCount}</strong> / ${totalCount}問 (${pct}%) 
+            ${answeredCount > 0 ? `| 正答率: <strong>${accuracy}%</strong> (${correctCount}問正解)` : ''}
+          </div>
+        </div>
+        <button class="btn-reset-exam" ${answeredCount === 0 ? 'disabled' : ''} onclick="resetExamProgress('${item.code}')">
+          ${Icons.refresh} この試験をリセット
+        </button>
+      </div>
+    `;
+  });
+
+  body.innerHTML = html;
+}
+
+/**
+ * 試験ごとに解いた問題を一式リセットする
+ * @param {string} examCode - 'CCAO-F', 'CCDV-F', 'CCAR-F', 'CCAR-P', 'minorun', 'all'
+ */
+function resetExamProgress(examCode) {
+  const examTitles = {
+    'CCDV-F': 'CCDV-F (Developer Foundations)',
+    'CCAO-F': 'CCAO-F (Associate Foundations)',
+    'CCAR-F': 'CCAR-F (Architect Foundations)',
+    'CCAR-P': 'CCAR-P (Architect Professional)',
+    'minorun': '🔥 みのるん式特訓',
+    'all': '全資格（全問題）'
+  };
+
+  const displayName = examTitles[examCode] || examCode;
+  let targetQuestions = [];
+
+  if (examCode === 'minorun') {
+    targetQuestions = QUESTIONS_DATA.filter(q => q.specialTag === 'みのるん式特訓');
+  } else if (examCode === 'all') {
+    targetQuestions = QUESTIONS_DATA;
+  } else {
+    targetQuestions = QUESTIONS_DATA.filter(q => q.exam === examCode);
+  }
+
+  const targetIds = targetQuestions.map(q => q.id);
+  const answeredQuestions = targetQuestions.filter(q => AppState.userAnswers[q.id]);
+  const answeredCount = answeredQuestions.length;
+
+  if (answeredCount === 0) {
+    alert(`【${displayName}】にはまだ解答履歴がありません。`);
+    return;
+  }
+
+  const confirmMsg = examCode === 'all'
+    ? `【全資格（全問題）】の解答履歴（計 ${answeredCount}問）を一括リセットしますか？\n\n※全問の解答状況と正誤判定が未解答に戻ります。\n※ブックマークや教本読了状態は保持されます。`
+    : `【${displayName}】の解答履歴（${answeredCount}問分）を一式リセットしますか？\n\n※この試験の解答状況と正誤判定が初期化され、最初から解き直せます。\n※他試験の解答履歴、ブックマーク、教本の読了状況は保持されます。`;
+
+  if (!confirm(confirmMsg)) return;
+
+  targetIds.forEach(id => {
+    delete AppState.userAnswers[id];
+    delete AppState.pendingSelections[id];
+    AppState.weaknesses.delete(id);
+  });
+
+  saveLocalStorage();
+  updateProgressUI();
+  renderApp();
+
+  const modal = document.getElementById('resetProgressModal');
+  if (modal && modal.classList.contains('open')) {
+    renderResetModalContent();
+  }
+
+  alert(`【${displayName}】の解答履歴（${answeredCount}問）をリセットしました。`);
+}
+
+// Complete Full Reset (All progress, bookmarks, and chapters)
+function confirmFullReset() {
+  if (confirm('【警告】すべての試験の解答履歴、ブックマーク、誤答リスト、教本読了状態をすべて完全に初期化しますか？')) {
     AppState.userAnswers = {};
+    AppState.pendingSelections = {};
     AppState.bookmarks.clear();
     AppState.weaknesses.clear();
     AppState.readChapters.clear();
     saveLocalStorage();
-    renderApp();
     updateProgressUI();
-    alert('学習進捗をリセットしました。');
+    renderApp();
+    closeResetModal();
+    alert('すべての学習データを完全初期化しました。');
   }
+}
+
+// Legacy alias
+function confirmResetProgress() {
+  openResetModal();
 }
 
 // Switch Tab
@@ -336,14 +480,14 @@ function renderCcdvSpecialView(container) {
         </div>
         <div class="ccdv-stat-card">
           <div class="label">CCDV問題習熟度</div>
-          <div class="value" style="color: var(--accent-primary);">${answeredCCDV.length} / 60問 (${ccdvAccuracy}%)</div>
+          <div class="value" style="color: var(--accent-primary);">${answeredCCDV.length} / ${ccdvQuestions.length}問 (${ccdvAccuracy}%)</div>
         </div>
       </div>
 
       <!-- Quick Action Buttons -->
       <div class="ccdv-quick-actions">
         <button class="btn-ccdv-action primary" onclick="goToCcdvPractice()">
-          ${Icons.helpCircle} CCDV-F 実践問題集 (60問) を解く
+          ${Icons.helpCircle} CCDV-F 実践問題集 (${ccdvQuestions.length}問) を解く
         </button>
         <button class="btn-ccdv-action secondary" onclick="goToCcdvMock()">
           ${Icons.clock} CCDV-F 本番模擬試験 (120分) を開始
@@ -351,6 +495,11 @@ function renderCcdvSpecialView(container) {
         <button class="btn-ccdv-action secondary" onclick="switchTab('cheatsheet')">
           ${Icons.fileText} 必須チートシート（API早見表）
         </button>
+        ${answeredCCDV.length > 0 ? `
+          <button class="btn-reset-exam" style="padding: 8px 16px; border-radius: var(--radius-md);" onclick="resetExamProgress('CCDV-F')">
+            ${Icons.refresh} CCDV-F 解答リセット (${answeredCCDV.length}問済)
+          </button>
+        ` : ''}
       </div>
     </div>
 
@@ -540,6 +689,38 @@ function renderPracticeView(container) {
   const countCCAR = QUESTIONS_DATA.filter(q => q.exam === 'CCAR-F').length;
   const countCCARP = QUESTIONS_DATA.filter(q => q.exam === 'CCAR-P').length;
 
+  const answeredMinorun = QUESTIONS_DATA.filter(q => q.specialTag === 'みのるん式特訓' && AppState.userAnswers[q.id]).length;
+  const answeredCCAO = QUESTIONS_DATA.filter(q => q.exam === 'CCAO-F' && AppState.userAnswers[q.id]).length;
+  const answeredCCDV = QUESTIONS_DATA.filter(q => q.exam === 'CCDV-F' && AppState.userAnswers[q.id]).length;
+  const answeredCCAR = QUESTIONS_DATA.filter(q => q.exam === 'CCAR-F' && AppState.userAnswers[q.id]).length;
+  const answeredCCARP = QUESTIONS_DATA.filter(q => q.exam === 'CCAR-P' && AppState.userAnswers[q.id]).length;
+  const totalAnsweredAll = Object.keys(AppState.userAnswers).length;
+
+  // Selected Exam stats for Status & Reset Bar
+  const currentExamFilter = AppState.practiceFilters.exam;
+  let examTargetQs = [];
+  let currentExamLabel = '';
+  let currentExamShort = '';
+
+  if (currentExamFilter === 'minorun') {
+    examTargetQs = QUESTIONS_DATA.filter(q => q.specialTag === 'みのるん式特訓');
+    currentExamLabel = '🔥 みのるん式特訓';
+    currentExamShort = 'みのるん式特訓';
+  } else if (currentExamFilter === 'all') {
+    examTargetQs = QUESTIONS_DATA;
+    currentExamLabel = '全資格 総合';
+    currentExamShort = '全問題';
+  } else {
+    examTargetQs = QUESTIONS_DATA.filter(q => q.exam === currentExamFilter);
+    currentExamLabel = currentExamFilter;
+    currentExamShort = currentExamFilter;
+  }
+
+  const answeredInCurrent = examTargetQs.filter(q => AppState.userAnswers[q.id]).length;
+  const correctInCurrent = examTargetQs.filter(q => AppState.userAnswers[q.id]?.isCorrect).length;
+  const currentAccuracy = answeredInCurrent > 0 ? Math.round((correctInCurrent / answeredInCurrent) * 100) : 0;
+  const currentProgressPct = examTargetQs.length > 0 ? Math.round((answeredInCurrent / examTargetQs.length) * 100) : 0;
+
   let html = `
     <div class="view-hero">
       <span class="view-hero-badge">Question Bank (全${QUESTIONS_DATA.length}問・各試験70問)</span>
@@ -549,12 +730,31 @@ function renderPracticeView(container) {
 
     <!-- Exam Selector Pills -->
     <div class="exam-selector-pills">
-      <button class="exam-pill ${AppState.practiceFilters.exam === 'all' ? 'active' : ''}" onclick="setPracticeExamFilter('all')">全資格 (${QUESTIONS_DATA.length})</button>
-      <button class="exam-pill ${AppState.practiceFilters.exam === 'minorun' ? 'active' : ''}" style="border-color: #ecc94b; color: ${AppState.practiceFilters.exam === 'minorun' ? 'white' : '#ecc94b'};" onclick="setPracticeExamFilter('minorun')">🔥 みのるん式特訓 (${minorunCount})</button>
-      <button class="exam-pill ${AppState.practiceFilters.exam === 'CCAO-F' ? 'active' : ''}" onclick="setPracticeExamFilter('CCAO-F')">CCAO-F (${countCCAO}問)</button>
-      <button class="exam-pill ${AppState.practiceFilters.exam === 'CCDV-F' ? 'active' : ''}" onclick="setPracticeExamFilter('CCDV-F')">CCDV-F (${countCCDV}問)</button>
-      <button class="exam-pill ${AppState.practiceFilters.exam === 'CCAR-F' ? 'active' : ''}" onclick="setPracticeExamFilter('CCAR-F')">CCAR-F (${countCCAR}問 ★最難関)</button>
-      <button class="exam-pill ${AppState.practiceFilters.exam === 'CCAR-P' ? 'active' : ''}" onclick="setPracticeExamFilter('CCAR-P')">CCAR-P (${countCCARP}問)</button>
+      <button class="exam-pill ${AppState.practiceFilters.exam === 'all' ? 'active' : ''}" onclick="setPracticeExamFilter('all')">全資格 (${totalAnsweredAll}/${QUESTIONS_DATA.length})</button>
+      <button class="exam-pill ${AppState.practiceFilters.exam === 'minorun' ? 'active' : ''}" style="border-color: #ecc94b; color: ${AppState.practiceFilters.exam === 'minorun' ? 'white' : '#ecc94b'};" onclick="setPracticeExamFilter('minorun')">🔥 みのるん式 (${answeredMinorun}/${minorunCount})</button>
+      <button class="exam-pill ${AppState.practiceFilters.exam === 'CCAO-F' ? 'active' : ''}" onclick="setPracticeExamFilter('CCAO-F')">CCAO-F (${answeredCCAO}/${countCCAO})</button>
+      <button class="exam-pill ${AppState.practiceFilters.exam === 'CCDV-F' ? 'active' : ''}" onclick="setPracticeExamFilter('CCDV-F')">CCDV-F (${answeredCCDV}/${countCCDV})</button>
+      <button class="exam-pill ${AppState.practiceFilters.exam === 'CCAR-F' ? 'active' : ''}" onclick="setPracticeExamFilter('CCAR-F')">CCAR-F (${answeredCCAR}/${countCCAR} ★最難関)</button>
+      <button class="exam-pill ${AppState.practiceFilters.exam === 'CCAR-P' ? 'active' : ''}" onclick="setPracticeExamFilter('CCAR-P')">CCAR-P (${answeredCCARP}/${countCCARP})</button>
+    </div>
+
+    <!-- Exam Progress & Reset Bar -->
+    <div class="practice-exam-status-bar">
+      <div class="exam-status-info">
+        <span class="status-badge-inline">${currentExamLabel}</span>
+        <span class="status-metric-text">
+          解答進捗: <strong>${answeredInCurrent}</strong> / ${examTargetQs.length}問 (${currentProgressPct}%)
+          ${answeredInCurrent > 0 ? `| 正答率: <strong>${currentAccuracy}%</strong> (${correctInCurrent}問正解)` : ''}
+        </span>
+      </div>
+      <div class="status-actions-group">
+        <button class="btn-reset-exam" ${answeredInCurrent === 0 ? 'disabled' : ''} onclick="resetExamProgress('${currentExamFilter}')" title="${currentExamShort}の解答履歴を一式リセット">
+          ${Icons.refresh} ${currentExamShort}の解答をリセット
+        </button>
+        <button class="btn-reset-outline" onclick="openResetModal()" title="全試験の進捗リセット管理を開く">
+          試験別リセット管理...
+        </button>
+      </div>
     </div>
 
     <!-- Filters Bar -->
@@ -888,6 +1088,7 @@ function renderMockSetupView(container) {
       ].map(e => {
         const qCount = QUESTIONS_DATA.filter(q => q.exam === e.code).length;
         const note = e.code === 'CCAR-F' ? ' (特訓18問含)' : '';
+        const answeredExamCount = QUESTIONS_DATA.filter(q => q.exam === e.code && AppState.userAnswers[q.id]).length;
         return `
         <div class="question-card" style="display: flex; flex-direction: column; justify-content: space-between;">
           <div>
@@ -897,15 +1098,26 @@ function renderMockSetupView(container) {
             </div>
             <h3 style="font-size: 17px; margin-bottom: 8px; color: var(--text-primary);">${e.name}</h3>
             <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.6;">${e.desc}</p>
-            <div style="font-size: 12px; color: var(--text-muted); display: flex; gap: 12px; margin-bottom: 20px;">
+            <div style="font-size: 12px; color: var(--text-muted); display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;">
               <span><strong>問題数:</strong> ${qCount}問${note}</span>
               <span><strong>制限時間:</strong> ${e.time}</span>
               <span><strong>合格ライン:</strong> ${e.pass}</span>
+              <span><strong>解答済:</strong> <strong style="color: var(--accent-primary);">${answeredExamCount}</strong>/${qCount}問</span>
             </div>
           </div>
-          <button class="btn-primary" style="width: 100%;" onclick="startMockExam('${e.code}')">
-            ${Icons.clock} この試験を開始する
-          </button>
+          <div style="display: flex; gap: 8px; flex-direction: column;">
+            <button class="btn-primary" style="width: 100%;" onclick="startMockExam('${e.code}')">
+              ${Icons.clock} 本番シミュレーション試験を開始
+            </button>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn-secondary" style="flex: 1; font-size: 12px; padding: 7px 10px;" onclick="switchPracticeExam('${e.code}')">
+                練習問題を解く
+              </button>
+              <button class="btn-reset-exam" style="font-size: 12px; padding: 7px 10px;" ${answeredExamCount === 0 ? 'disabled' : ''} onclick="resetExamProgress('${e.code}')" title="この試験の解答履歴をリセット">
+                ${Icons.refresh} リセット (${answeredExamCount})
+              </button>
+            </div>
+          </div>
         </div>
       `;}).join('')}
     </div>

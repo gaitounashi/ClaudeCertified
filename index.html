@@ -86,7 +86,7 @@
           <button class="btn-icon" id="themeToggleBtn" title="ダーク/ライトテーマ切替">
             <svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
           </button>
-          <button class="btn-icon" id="resetProgressBtn" title="進捗データをリセット">
+          <button class="btn-icon" id="resetProgressBtn" title="試験別・解答履歴リセット管理">
             <svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
           </button>
           <span style="font-size: 11px; color: var(--text-muted); margin-left: auto;">v1.0.0</span>
@@ -125,6 +125,30 @@
       <main class="content-view" id="contentContainer">
         <!-- Rendered by JS -->
       </main>
+    </div>
+  </div>
+
+  <!-- Progress Reset Modal -->
+  <div id="resetProgressModal" class="modal-overlay" onclick="handleModalOverlayClick(event)">
+    <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="resetModalTitle">
+      <div class="modal-header">
+        <div class="modal-title" id="resetModalTitle">
+          <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-primary);"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+          試験別・解答進捗リセット管理
+        </div>
+        <button class="modal-close-btn" onclick="closeResetModal()" aria-label="閉じる">✕</button>
+      </div>
+      <div class="modal-body" id="resetModalBody">
+        <!-- Rendered dynamically by JS -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn-reset-exam" style="background: rgba(229, 62, 62, 0.15);" onclick="confirmFullReset()">
+          ⚠️ 全データ完全初期化
+        </button>
+        <button class="btn-reset-outline" onclick="closeResetModal()">
+          閉じる
+        </button>
+      </div>
     </div>
   </div>
 
