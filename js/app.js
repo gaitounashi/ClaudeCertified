@@ -185,7 +185,7 @@ function renderResetModalContent() {
     { code: 'CCDV-F', title: 'CCDV-F (Developer Foundations)', desc: 'API / MCP / Tool Use / Caching' },
     { code: 'CCAO-F', title: 'CCAO-F (Associate Foundations)', desc: 'プロンプト / 活用 / ガバナンス' },
     { code: 'CCAR-F', title: 'CCAR-F (Architect Foundations)', desc: '公式6大シナリオ / Prerequisite Gate / Agent SDK' },
-    { code: 'CCAR-P', title: 'CCAR-P (Architect Professional)', desc: 'マルチクラウド / 評価パイプライン / 安全性' }
+    { code: 'CCAR-P', title: 'CCAR-P (Architect Professional)', desc: '公式4大シナリオ / 金融マルチクラウド / 医療AI規制 / MLOps / FinOps' }
   ];
 
   let html = `
@@ -601,7 +601,7 @@ function renderTextbookView(container) {
     { key: 'ccao', label: 'CCAO-F (Associate)', code: 'CCAO-F' },
     { key: 'ccdv', label: 'CCDV-F (Developer)', code: 'CCDV-F' },
     { key: 'ccar_f', label: 'CCAR-F (Architect-F)', code: 'CCAR-F ★最難関' },
-    { key: 'ccar_p', label: 'CCAR-P (Architect-P)', code: 'CCAR-P' }
+    { key: 'ccar_p', label: 'CCAR-P (Architect-P)', code: 'CCAR-P ★4大シナリオ' }
   ];
 
   const currentBook = TEXTBOOKS_DATA[AppState.textbookExam] || TEXTBOOKS_DATA.ccdv;
@@ -733,7 +733,7 @@ function renderPracticeView(container) {
       <button class="exam-pill ${AppState.practiceFilters.exam === 'CCDV-F' ? 'active' : ''}" onclick="setPracticeExamFilter('CCDV-F')">CCDV-F (${answeredCCDV}/${countCCDV})</button>
       <button class="exam-pill ${AppState.practiceFilters.exam === 'CCAO-F' ? 'active' : ''}" onclick="setPracticeExamFilter('CCAO-F')">CCAO-F (${answeredCCAO}/${countCCAO})</button>
       <button class="exam-pill ${AppState.practiceFilters.exam === 'CCAR-F' ? 'active' : ''}" onclick="setPracticeExamFilter('CCAR-F')">CCAR-F (${answeredCCAR}/${countCCAR}問 ★公式6大シナリオ)</button>
-      <button class="exam-pill ${AppState.practiceFilters.exam === 'CCAR-P' ? 'active' : ''}" onclick="setPracticeExamFilter('CCAR-P')">CCAR-P (${answeredCCARP}/${countCCARP})</button>
+      <button class="exam-pill ${AppState.practiceFilters.exam === 'CCAR-P' ? 'active' : ''}" onclick="setPracticeExamFilter('CCAR-P')">CCAR-P (${answeredCCARP}/${countCCARP}問 ★公式4大シナリオ)</button>
     </div>
 
     <!-- Exam Progress & Reset Bar -->
@@ -1081,11 +1081,11 @@ function renderMockSetupView(container) {
       ${[
         { code: 'CCDV-F', name: 'Developer - Foundations', badge: '最優先推奨', desc: 'API、MCP、Tool Use、Prompt Cachingの実装問題。最も選択肢を絞りやすく合格しやすい。', time: '120分', pass: '720点' },
         { code: 'CCAO-F', name: 'Associate - Foundations', badge: '基礎固め', desc: 'プロンプト原則、AI Fluency、ハルシネーション対策、業務ワークフロー設計。', time: '120分', pass: '720点' },
-        { code: 'CCAR-P', name: 'Architect - Professional', badge: '上級資格', desc: 'Bedrock/Vertex統合、ZDR契約、RSP/ASL安全基準、LLM-as-a-Judge評価パイプライン。', time: '120分', pass: '720点' },
+        { code: 'CCAR-P', name: 'Architect - Professional', badge: '最上位・公式4大シナリオ', desc: '公式4大エンタープライズシナリオ準拠：金融マルチクラウド統合基盤・医療高リスクAIガバナンス・LLM評価MLOpsパイプライン・FinOps/PTU可観測性。', time: '120分', pass: '720点' },
         { code: 'CCAR-F', name: 'Architect - Foundations', badge: '最難関・実戦シナリオ', desc: '公式Exam Guide公開の「6大シナリオ」完全準拠。Prerequisite Gate、Hooksによるツール制御、マルチエージェント協調、Claude Code運用のケーススタディ。', time: '120分', pass: '720点' }
       ].map(e => {
         const qCount = QUESTIONS_DATA.filter(q => q.exam === e.code).length;
-        const note = e.code === 'CCAR-F' ? ' (6大シナリオ完全対応)' : '';
+        const note = e.code === 'CCAR-F' ? ' (6大シナリオ完全対応)' : (e.code === 'CCAR-P' ? ' (公式4大シナリオ完全対応)' : '');
         const answeredExamCount = QUESTIONS_DATA.filter(q => q.exam === e.code && AppState.userAnswers[q.id]).length;
         return `
         <div class="question-card" style="display: flex; flex-direction: column; justify-content: space-between;">
