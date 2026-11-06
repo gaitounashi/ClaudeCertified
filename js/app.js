@@ -184,9 +184,8 @@ function renderResetModalContent() {
   const exams = [
     { code: 'CCDV-F', title: 'CCDV-F (Developer Foundations)', desc: 'API / MCP / Tool Use / Caching' },
     { code: 'CCAO-F', title: 'CCAO-F (Associate Foundations)', desc: 'プロンプト / 活用 / ガバナンス' },
-    { code: 'CCAR-F', title: 'CCAR-F (Architect Foundations)', desc: 'エージェント5大設計 / RAG / 耐障害性' },
-    { code: 'CCAR-P', title: 'CCAR-P (Architect Professional)', desc: 'マルチクラウド / 評価パイプライン / 安全性' },
-    { code: 'minorun', title: '🔥 みのるん式特訓', desc: 'CCAR-F 引っかけ・落とし穴特訓 18問' }
+    { code: 'CCAR-F', title: 'CCAR-F (Architect Foundations)', desc: '公式6大シナリオ / Prerequisite Gate / Agent SDK' },
+    { code: 'CCAR-P', title: 'CCAR-P (Architect Professional)', desc: 'マルチクラウド / 評価パイプライン / 安全性' }
   ];
 
   let html = `
@@ -731,10 +730,9 @@ function renderPracticeView(container) {
     <!-- Exam Selector Pills -->
     <div class="exam-selector-pills">
       <button class="exam-pill ${AppState.practiceFilters.exam === 'all' ? 'active' : ''}" onclick="setPracticeExamFilter('all')">全資格 (${totalAnsweredAll}/${QUESTIONS_DATA.length})</button>
-      <button class="exam-pill ${AppState.practiceFilters.exam === 'minorun' ? 'active' : ''}" style="border-color: #ecc94b; color: ${AppState.practiceFilters.exam === 'minorun' ? 'white' : '#ecc94b'};" onclick="setPracticeExamFilter('minorun')">🔥 みのるん式 (${answeredMinorun}/${minorunCount})</button>
-      <button class="exam-pill ${AppState.practiceFilters.exam === 'CCAO-F' ? 'active' : ''}" onclick="setPracticeExamFilter('CCAO-F')">CCAO-F (${answeredCCAO}/${countCCAO})</button>
       <button class="exam-pill ${AppState.practiceFilters.exam === 'CCDV-F' ? 'active' : ''}" onclick="setPracticeExamFilter('CCDV-F')">CCDV-F (${answeredCCDV}/${countCCDV})</button>
-      <button class="exam-pill ${AppState.practiceFilters.exam === 'CCAR-F' ? 'active' : ''}" onclick="setPracticeExamFilter('CCAR-F')">CCAR-F (${answeredCCAR}/${countCCAR} ★最難関)</button>
+      <button class="exam-pill ${AppState.practiceFilters.exam === 'CCAO-F' ? 'active' : ''}" onclick="setPracticeExamFilter('CCAO-F')">CCAO-F (${answeredCCAO}/${countCCAO})</button>
+      <button class="exam-pill ${AppState.practiceFilters.exam === 'CCAR-F' ? 'active' : ''}" onclick="setPracticeExamFilter('CCAR-F')">CCAR-F (${answeredCCAR}/${countCCAR}問 ★公式6大シナリオ)</button>
       <button class="exam-pill ${AppState.practiceFilters.exam === 'CCAR-P' ? 'active' : ''}" onclick="setPracticeExamFilter('CCAR-P')">CCAR-P (${answeredCCARP}/${countCCARP})</button>
     </div>
 
@@ -1084,10 +1082,10 @@ function renderMockSetupView(container) {
         { code: 'CCDV-F', name: 'Developer - Foundations', badge: '最優先推奨', desc: 'API、MCP、Tool Use、Prompt Cachingの実装問題。最も選択肢を絞りやすく合格しやすい。', time: '120分', pass: '720点' },
         { code: 'CCAO-F', name: 'Associate - Foundations', badge: '基礎固め', desc: 'プロンプト原則、AI Fluency、ハルシネーション対策、業務ワークフロー設計。', time: '120分', pass: '720点' },
         { code: 'CCAR-P', name: 'Architect - Professional', badge: '上級資格', desc: 'Bedrock/Vertex統合、ZDR契約、RSP/ASL安全基準、LLM-as-a-Judge評価パイプライン。', time: '120分', pass: '720点' },
-        { code: 'CCAR-F', name: 'Architect - Foundations', badge: '最難関・ラスボス', desc: 'エージェント5大パターン、長文脈配置、Contextual Retrieval、トレードオフの罠が満載。みのるん式特訓18問収録。', time: '120分', pass: '720点' }
+        { code: 'CCAR-F', name: 'Architect - Foundations', badge: '最難関・実戦シナリオ', desc: '公式Exam Guide公開の「6大シナリオ」完全準拠。Prerequisite Gate、Hooksによるツール制御、マルチエージェント協調、Claude Code運用のケーススタディ。', time: '120分', pass: '720点' }
       ].map(e => {
         const qCount = QUESTIONS_DATA.filter(q => q.exam === e.code).length;
-        const note = e.code === 'CCAR-F' ? ' (特訓18問含)' : '';
+        const note = e.code === 'CCAR-F' ? ' (6大シナリオ完全対応)' : '';
         const answeredExamCount = QUESTIONS_DATA.filter(q => q.exam === e.code && AppState.userAnswers[q.id]).length;
         return `
         <div class="question-card" style="display: flex; flex-direction: column; justify-content: space-between;">
