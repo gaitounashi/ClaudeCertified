@@ -185,7 +185,8 @@ function renderResetModalContent() {
     { code: 'CCDV-F', title: 'CCDV-F (Developer Foundations)', desc: 'API / MCP / Tool Use / Caching' },
     { code: 'CCAO-F', title: 'CCAO-F (Associate Foundations)', desc: 'プロンプト / 活用 / ガバナンス' },
     { code: 'CCAR-F', title: 'CCAR-F (Architect Foundations)', desc: '公式6大シナリオ / Prerequisite Gate / Agent SDK' },
-    { code: 'CCAR-P', title: 'CCAR-P (Architect Professional)', desc: '公式4大シナリオ / 金融マルチクラウド / 医療AI規制 / MLOps / FinOps' }
+    { code: 'CCAR-P', title: 'CCAR-P (Architect Professional)', desc: '公式4大シナリオ / 金融マルチクラウド / 医療AI規制 / MLOps / FinOps' },
+    { code: 'preporato', title: '🎯 Preporato厳選 CCA-Fシナリオ (全20問)', desc: 'エージェント / ツール・MCP / Claude Code / プロンプト / コンテキスト' }
   ];
 
   let html = `
@@ -199,6 +200,8 @@ function renderResetModalContent() {
     let questions = [];
     if (item.code === 'minorun') {
       questions = QUESTIONS_DATA.filter(q => q.specialTag === 'みのるん式特訓');
+    } else if (item.code === 'preporato') {
+      questions = QUESTIONS_DATA.filter(q => q.specialTag === 'Preporato厳選');
     } else {
       questions = QUESTIONS_DATA.filter(q => q.exam === item.code);
     }
@@ -239,6 +242,7 @@ function resetExamProgress(examCode) {
     'CCAO-F': 'CCAO-F (Associate Foundations)',
     'CCAR-F': 'CCAR-F (Architect Foundations)',
     'CCAR-P': 'CCAR-P (Architect Professional)',
+    'preporato': '🎯 Preporato厳選 CCA-Fシナリオ',
     'minorun': '🔥 みのるん式特訓',
     'all': '全資格（全問題）'
   };
@@ -248,6 +252,8 @@ function resetExamProgress(examCode) {
 
   if (examCode === 'minorun') {
     targetQuestions = QUESTIONS_DATA.filter(q => q.specialTag === 'みのるん式特訓');
+  } else if (examCode === 'preporato') {
+    targetQuestions = QUESTIONS_DATA.filter(q => q.specialTag === 'Preporato厳選');
   } else if (examCode === 'all') {
     targetQuestions = QUESTIONS_DATA;
   } else {
@@ -330,6 +336,9 @@ function renderApp() {
   switch (AppState.currentTab) {
     case 'ccdv-special':
       renderCcdvSpecialView(container);
+      break;
+    case 'preporato':
+      renderPreporatoView(container);
       break;
     case 'roadmap':
       renderRoadmapView(container);
@@ -593,6 +602,89 @@ function goToCcdvMock() {
 }
 
 // ==========================================================================
+// PREPORATO CCA-F SCENARIO VIEW (全20問)
+// ==========================================================================
+function renderPreporatoView(container) {
+  const prepQuestions = QUESTIONS_DATA.filter(q => q.specialTag === 'Preporato厳選');
+  const answeredPrep = prepQuestions.filter(q => AppState.userAnswers[q.id]).length;
+  const correctPrep = prepQuestions.filter(q => AppState.userAnswers[q.id]?.isCorrect).length;
+  const accuracy = answeredPrep > 0 ? Math.round((correctPrep / answeredPrep) * 100) : 0;
+  const progressPct = prepQuestions.length > 0 ? Math.round((answeredPrep / prepQuestions.length) * 100) : 0;
+
+  const domains = [
+    { key: 'all', label: '全5ドメイン (20問)' },
+    { key: 'エージェントアーキテクチャとオーケストレーション', label: 'エージェント設計 (5問)' },
+    { key: 'ツール設計とMCP統合', label: 'ツール & MCP (4問)' },
+    { key: 'Claude Code の設定とワークフロー', label: 'Claude Code (4問)' },
+    { key: 'プロンプトエンジニアリングと構造化出力', label: 'プロンプト・構造化出力 (4問)' },
+    { key: 'コンテキスト管理と信頼性', label: 'コンテキスト管理 (3問)' }
+  ];
+
+  if (!AppState.preporatoDomain) {
+    AppState.preporatoDomain = 'all';
+  }
+
+  let filtered = prepQuestions;
+  if (AppState.preporatoDomain !== 'all') {
+    filtered = prepQuestions.filter(q => q.category === AppState.preporatoDomain);
+  }
+
+  let html = `
+    <div class="view-hero" style="background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(15, 23, 42, 0.05)); border: 1px solid rgba(59, 130, 246, 0.3);">
+      <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;">
+        <span class="view-hero-badge" style="background: #2563eb; color: #fff;">Preporato 2026年最新出題形式</span>
+        <span style="font-size: 11px; background: rgba(59, 130, 246, 0.15); color: #2563eb; padding: 2px 8px; border-radius: var(--radius-full); font-weight: 700;">CCA-F / CCAR-F 実戦シナリオ</span>
+      </div>
+      <h2>🎯 Preporato厳選 CCA-F実戦シナリオ特訓 (全20問)</h2>
+      <p style="margin-bottom: 12px; line-height: 1.6;">
+        海外・国内の受験者から圧倒的支持を集める認定試験対策「Preporato」が公開した、本番環境レベルの本格シナリオ問題20問を完全収録。<br>
+        5大出題ドメイン（エージェント設計、ツール/MCP統合、Claude Code運用、プロンプト/構造化出力、コンテキスト管理）のトレードオフ判断を問う実践問題です。<br>
+        単一選択式（15問）に加えて、本試験の定番である<strong>「2つ選択（複数選択）」5問</strong>にも完全対応しています。
+      </p>
+      <div style="font-size: 12px; color: var(--text-secondary); background: var(--bg-card); padding: 8px 14px; border-radius: 8px; border-left: 3px solid #2563eb; display: inline-block;">
+        ⏱️ <strong>目標タイム</strong>: 40分（本試験は120分60問のため1問あたり約2分）。合格目安: <strong>17問以上正解</strong>で本番即合格圏内。
+      </div>
+    </div>
+
+    <!-- Status & Reset Bar -->
+    <div class="practice-exam-status-bar" style="border-left-color: #2563eb;">
+      <div class="exam-status-info">
+        <span class="status-badge-inline" style="background: rgba(37, 99, 235, 0.15); color: #2563eb;">Preporato 厳選演習</span>
+        <span class="status-metric-text">
+          解答進捗: <strong>${answeredPrep}</strong> / ${prepQuestions.length}問 (${progressPct}%) 
+          ${answeredPrep > 0 ? `| 正答率: <strong>${accuracy}%</strong> (${correctPrep}問正解)` : ''}
+        </span>
+      </div>
+      <div class="status-actions-group">
+        <button class="btn-reset-exam" ${answeredPrep === 0 ? 'disabled' : ''} onclick="resetExamProgress('preporato')" title="Preporato厳選問題の解答履歴を一式リセット">
+          ${Icons.refresh} Preporato演習をリセット
+        </button>
+      </div>
+    </div>
+
+    <!-- Domain Filter Pills -->
+    <div class="exam-selector-pills" style="margin-bottom: 20px;">
+      ${domains.map(d => `
+        <button class="exam-pill ${AppState.preporatoDomain === d.key ? 'active' : ''}" onclick="setPreporatoDomain('${d.key}')">
+          ${d.label}
+        </button>
+      `).join('')}
+    </div>
+
+    <div class="questions-list">
+      ${filtered.map((q, idx) => renderQuestionCard(q, idx, filtered.length)).join('')}
+    </div>
+  `;
+
+  container.innerHTML = html;
+}
+
+function setPreporatoDomain(domain) {
+  AppState.preporatoDomain = domain;
+  renderApp();
+}
+
+// ==========================================================================
 // 2. TEXTBOOK VIEW
 // ==========================================================================
 function renderTextbookView(container) {
@@ -687,12 +779,14 @@ function renderPracticeView(container) {
   const countCCDV = QUESTIONS_DATA.filter(q => q.exam === 'CCDV-F').length;
   const countCCAR = QUESTIONS_DATA.filter(q => q.exam === 'CCAR-F').length;
   const countCCARP = QUESTIONS_DATA.filter(q => q.exam === 'CCAR-P').length;
+  const countPrep = QUESTIONS_DATA.filter(q => q.specialTag === 'Preporato厳選').length;
 
   const answeredMinorun = QUESTIONS_DATA.filter(q => q.specialTag === 'みのるん式特訓' && AppState.userAnswers[q.id]).length;
   const answeredCCAO = QUESTIONS_DATA.filter(q => q.exam === 'CCAO-F' && AppState.userAnswers[q.id]).length;
   const answeredCCDV = QUESTIONS_DATA.filter(q => q.exam === 'CCDV-F' && AppState.userAnswers[q.id]).length;
   const answeredCCAR = QUESTIONS_DATA.filter(q => q.exam === 'CCAR-F' && AppState.userAnswers[q.id]).length;
   const answeredCCARP = QUESTIONS_DATA.filter(q => q.exam === 'CCAR-P' && AppState.userAnswers[q.id]).length;
+  const answeredPrep = QUESTIONS_DATA.filter(q => q.specialTag === 'Preporato厳選' && AppState.userAnswers[q.id]).length;
   const totalAnsweredAll = Object.keys(AppState.userAnswers).length;
 
   // Selected Exam stats for Status & Reset Bar
@@ -705,6 +799,10 @@ function renderPracticeView(container) {
     examTargetQs = QUESTIONS_DATA.filter(q => q.specialTag === 'みのるん式特訓');
     currentExamLabel = '🔥 みのるん式特訓';
     currentExamShort = 'みのるん式特訓';
+  } else if (currentExamFilter === 'preporato') {
+    examTargetQs = QUESTIONS_DATA.filter(q => q.specialTag === 'Preporato厳選');
+    currentExamLabel = '🎯 Preporato厳選 CCA-F実戦シナリオ';
+    currentExamShort = 'Preporato厳選';
   } else if (currentExamFilter === 'all') {
     examTargetQs = QUESTIONS_DATA;
     currentExamLabel = '全資格 総合';
@@ -722,18 +820,19 @@ function renderPracticeView(container) {
 
   let html = `
     <div class="view-hero">
-      <span class="view-hero-badge">Question Bank (全${QUESTIONS_DATA.length}問・各試験70問)</span>
+      <span class="view-hero-badge">Question Bank (全${QUESTIONS_DATA.length}問・4資格＋Preporato厳選)</span>
       <h2>Claude認定 資格別 実践問題集</h2>
       <p>本番同様のシナリオ問題、XMLプロンプト、エージェント設計、MCP、ガバナンスを徹底演習。全問に公式ドキュメント準拠の詳細解説と引っかけ対策付き。</p>
     </div>
 
     <!-- Exam Selector Pills -->
     <div class="exam-selector-pills">
-      <button class="exam-pill ${AppState.practiceFilters.exam === 'all' ? 'active' : ''}" onclick="setPracticeExamFilter('all')">全資格 (${totalAnsweredAll}/${QUESTIONS_DATA.length})</button>
+      <button class="exam-pill ${AppState.practiceFilters.exam === 'all' ? 'active' : ''}" onclick="setPracticeExamFilter('all')">全問題 (${totalAnsweredAll}/${QUESTIONS_DATA.length})</button>
       <button class="exam-pill ${AppState.practiceFilters.exam === 'CCDV-F' ? 'active' : ''}" onclick="setPracticeExamFilter('CCDV-F')">CCDV-F (${answeredCCDV}/${countCCDV})</button>
       <button class="exam-pill ${AppState.practiceFilters.exam === 'CCAO-F' ? 'active' : ''}" onclick="setPracticeExamFilter('CCAO-F')">CCAO-F (${answeredCCAO}/${countCCAO})</button>
       <button class="exam-pill ${AppState.practiceFilters.exam === 'CCAR-F' ? 'active' : ''}" onclick="setPracticeExamFilter('CCAR-F')">CCAR-F (${answeredCCAR}/${countCCAR}問 ★公式6大シナリオ)</button>
       <button class="exam-pill ${AppState.practiceFilters.exam === 'CCAR-P' ? 'active' : ''}" onclick="setPracticeExamFilter('CCAR-P')">CCAR-P (${answeredCCARP}/${countCCARP}問 ★公式4大シナリオ)</button>
+      <button class="exam-pill ${AppState.practiceFilters.exam === 'preporato' ? 'active' : ''}" onclick="setPracticeExamFilter('preporato')" style="${AppState.practiceFilters.exam === 'preporato' ? '' : 'border-color: #3b82f6; color: #3b82f6;'}">🎯 Preporato厳選 (${answeredPrep}/${countPrep}問)</button>
     </div>
 
     <!-- Exam Progress & Reset Bar -->
@@ -819,6 +918,8 @@ function getFilteredQuestions() {
   return QUESTIONS_DATA.filter(q => {
     if (AppState.practiceFilters.exam === 'minorun') {
       if (q.specialTag !== 'みのるん式特訓') return false;
+    } else if (AppState.practiceFilters.exam === 'preporato') {
+      if (q.specialTag !== 'Preporato厳選') return false;
     } else if (AppState.practiceFilters.exam !== 'all' && q.exam !== AppState.practiceFilters.exam) {
       return false;
     }
