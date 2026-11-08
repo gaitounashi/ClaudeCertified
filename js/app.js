@@ -4,9 +4,15 @@
 
 // Application State
 const AppState = {
-  currentTab: 'roadmap',
+  currentTab: 'ccarf-revenge',
   selectedExam: 'all',
   textbookExam: 'roadmap',
+  revengeFilters: {
+    priority: 'all', // 'all', 'zero', 'partial'
+    category: 'all',
+    status: 'all', // 'all', 'unanswered', 'incorrect'
+    showMatrix: true
+  },
   practiceFilters: {
     exam: 'all',
     difficulty: 'all',
@@ -182,11 +188,12 @@ function renderResetModalContent() {
   if (!body) return;
 
   const exams = [
-    { code: 'CCDV-F', title: 'CCDV-F (Developer Foundations)', desc: 'API / MCP / Tool Use / Caching' },
-    { code: 'CCAO-F', title: 'CCAO-F (Associate Foundations)', desc: 'プロンプト / 活用 / ガバナンス' },
+    { code: 'CCAR-F-REV', title: '🔥 CCAR-F スコアレポート弱点特訓 (全36問)', desc: '690→720+点突破 / 0%の8目標＋50〜80%の10目標ピンポイント対策' },
     { code: 'CCAR-F', title: 'CCAR-F (Architect Foundations)', desc: '公式6大シナリオ / Prerequisite Gate / Agent SDK' },
     { code: 'CCAR-P', title: 'CCAR-P (Architect Professional)', desc: '公式4大シナリオ / 金融マルチクラウド / 医療AI規制 / MLOps / FinOps' },
-    { code: 'preporato', title: '🎯 Preporato厳選 CCA-Fシナリオ (全20問)', desc: 'エージェント / ツール・MCP / Claude Code / プロンプト / コンテキスト' }
+    { code: 'preporato', title: '🎯 Preporato厳選 CCA-Fシナリオ (全20問)', desc: 'エージェント / ツール・MCP / Claude Code / プロンプト / コンテキスト' },
+    { code: 'CCDV-F', title: 'CCDV-F (Developer Foundations)', desc: 'API / MCP / Tool Use / Caching' },
+    { code: 'CCAO-F', title: 'CCAO-F (Associate Foundations)', desc: 'プロンプト / 活用 / ガバナンス' }
   ];
 
   let html = `
@@ -234,10 +241,11 @@ function renderResetModalContent() {
 
 /**
  * 試験ごとに解いた問題を一式リセットする
- * @param {string} examCode - 'CCAO-F', 'CCDV-F', 'CCAR-F', 'CCAR-P', 'minorun', 'all'
+ * @param {string} examCode - 'CCAO-F', 'CCDV-F', 'CCAR-F', 'CCAR-P', 'CCAR-F-REV', 'preporato', 'minorun', 'all'
  */
 function resetExamProgress(examCode) {
   const examTitles = {
+    'CCAR-F-REV': '🔥 CCAR-F スコアレポート弱点特訓 (全36問)',
     'CCDV-F': 'CCDV-F (Developer Foundations)',
     'CCAO-F': 'CCAO-F (Associate Foundations)',
     'CCAR-F': 'CCAR-F (Architect Foundations)',
@@ -334,6 +342,9 @@ function renderApp() {
   if (!container) return;
 
   switch (AppState.currentTab) {
+    case 'ccarf-revenge':
+      renderCcarfRevengeView(container);
+      break;
     case 'ccdv-special':
       renderCcdvSpecialView(container);
       break;
@@ -685,6 +696,389 @@ function setPreporatoDomain(domain) {
 }
 
 // ==========================================================================
+// CCAR-F SCORE REPORT REVENGE DRILL VIEW (690 -> 850+ Mastery / 全36問)
+// ==========================================================================
+const CCARF_WEAK_OBJECTIVES = [
+  {
+    num: 1, rate: "0%", priority: "zero", qIds: ["rev-ccarf-001", "rev-ccarf-002", "rev-ccarf-003"],
+    title: "目標1: 並列ツール呼び出しによるレイテンシー削減",
+    text: "単一の応答ターン内で複数のツール呼び出しを発行するようにエージェントループを構成し、独立したサブタスクの並列実行を可能にして、ラウンドトリップの合計レイテンシーを削減する。",
+    rule: "独立した複数ツールは1回のassistantターンで同時にtool_useを発行させ、結果は『単一のuserメッセージ内のcontent配列』に全tool_resultをまとめて1ターンで返す（disable_parallel_tool_useはfalse）。"
+  },
+  {
+    num: 2, rate: "0%", priority: "zero", qIds: ["rev-ccarf-004", "rev-ccarf-005", "rev-ccarf-006"],
+    title: "目標2: エージェント型レビューアーキテクチャの選択",
+    text: "タスクの範囲、リスクレベル、および人による承認の要件に基づいて、適切なエージェント型レビューアーキテクチャ（プランモード、直接実行、またはマルチフェーズワークフロー）を選択する。",
+    rule: "①局所・低リスク＝『直接実行』、②複数ファイル横断・実装前の設計合意が必要＝『プランモード』、③DB移行や破壊的変更など段階ごとの検証と人間承認(HITL)が必要＝『マルチフェーズワークフロー』。"
+  },
+  {
+    num: 3, rate: "0%", priority: "zero", qIds: ["rev-ccarf-007", "rev-ccarf-008", "rev-ccarf-009"],
+    title: "目標3: マルチエージェントパイプラインの状態永続化と再開戦略",
+    text: "完了済みの作業を繰り返したり以前の調査結果を失ったりすることなく、中断後に信頼性の高い再開を可能にする、マルチエージェントパイプライン向けの状態永続化戦略を設計する。",
+    rule: "外部マニフェスト（DB/JSON）に各タスクIDのステータスと構造化調査結果を完了都度アトミックに永続化する。再開時はcompletedをスキップし、中断中に変更されたファイルのみ差分再分析する。"
+  },
+  {
+    num: 4, rate: "0%", priority: "zero", qIds: ["rev-ccarf-010", "rev-ccarf-011", "rev-ccarf-012"],
+    title: "目標4: マルチエージェントのオーケストレーションパターン評価",
+    text: "マルチエージェントのオーケストレーションパターン（コーディネーター・ワーカー、並列実行、逐次パイプライン）を評価し、調査の網羅性、レイテンシー、および信頼性の要件を最もよく満たす構造を選択する。",
+    rule: "①独立した多角的監査（高網羅性＆低遅延）＝『並列実行』、②前段の出力が次段の前提条件＋段階的検証ゲート（高信頼性）＝『逐次パイプライン』、③中間結果で調査方針が動的に変わる＝『コーディネーター・ワーカー』。"
+  },
+  {
+    num: 5, rate: "0%", priority: "zero", qIds: ["rev-ccarf-013", "rev-ccarf-014", "rev-ccarf-015"],
+    title: "目標5: 反復的な改善ワークフローの構造化",
+    text: "具体的な入出力の例、特定の失敗に対する的を絞ったフィードバック、および統合的な評価のためにまとめた問題の説明を提供することで、反復的な改善のワークフローを構造化する。",
+    rule: "1件ずつエラーを小出しにせず、①『具体的な入出力例(Few-shot)』、②『特定の失敗箇所への的を絞ったフィードバック』、③『全失敗項目を1パスで直せるよう統合的にまとめた問題説明』の3点セットを渡す。"
+  },
+  {
+    num: 6, rate: "0%", priority: "zero", qIds: ["rev-ccarf-016", "rev-ccarf-017", "rev-ccarf-018"],
+    title: "目標6: Claude Code の構成メカニズムの使い分け",
+    text: "ガイダンスの種類と適用すべきタイミングに基づいて、正しい Claude Code の構成メカニズム（CLAUDE.md、glob パターンを用いた .claude/rules/、Skills、フック、または設定の権限）を選択する。",
+    rule: "①常時全体共通＝『CLAUDE.md』、②特定パス/拡張子のみ条件適用＝『glob付き .claude/rules/』、③オンデマンド専門手順書＝『Skills』、④100%決定論的強制/遮断(exit 2)＝『Hooks』、⑤コマンド/ファイル認可＝『Permissions』。"
+  },
+  {
+    num: 7, rate: "0%", priority: "zero", qIds: ["rev-ccarf-019", "rev-ccarf-020", "rev-ccarf-021"],
+    title: "目標7: 矛盾データの統合とソースレベルの不確実性保持",
+    text: "矛盾するデータを単一の確信的な記述にまとめるのではなく、確立された調査結果と議論の余地がある主張とを区別し、ソースレベルの不確実性を保持する統合エージェントの振る舞いを設計する。",
+    rule: "矛盾を多数決や平均で単一の断定文に丸めるのは厳禁！出力スキーマで『確立された調査結果(合意事実)』と『議論の余地がある主張(対立仮説)』を分離し、各出典メタデータと不確実性をそのまま併記する。"
+  },
+  {
+    num: 8, rate: "0%", priority: "zero", qIds: ["rev-ccarf-022", "rev-ccarf-023", "rev-ccarf-024"],
+    title: "目標8: 長大会話におけるコンテキストウィンドウ最適化",
+    text: "会話が実用的なトークン上限を超えても応答品質を維持するために、コンテキストウィンドウの最適化手法（要約、スライディングウィンドウ、構造化された状態オブジェクト、選択的な保持）を適用する。",
+    rule: "散文要約や単純FIFO削除だけでは初期制約や正確な識別子が消える。不変制約や確定事項は『構造化された状態オブジェクト』で厳密保持し、巨大な生ツール出力は根拠のみ『選択的に保持』して生ログをパージする。"
+  },
+  {
+    num: 9, rate: "50%", priority: "partial", qIds: ["rev-ccarf-025", "rev-ccarf-026"],
+    title: "目標9: サブエージェント委任戦略（目標指向 vs 手続き的）",
+    text: "サブエージェントへの委任戦略（目標指向の指示と手続き的な指示）を評価し、コーディネーターの可視性と制御を維持しながら適応的な振る舞いを可能にするアプローチを選択する。",
+    rule: "細かい手順を縛る手続き的指示ではなく、達成目標・スコープ境界・出力スキーマを定義する『目標指向の指示』で適応的探索を許し、根拠と代替案を含む構造化報告でコーディネーターの可視性と制御を保つ。"
+  },
+  {
+    num: 10, rate: "50%", priority: "partial", qIds: ["rev-ccarf-027", "rev-ccarf-028"],
+    title: "目標10: CI/CD パイプライン向け Claude Code CLI 呼び出し構成",
+    text: "非対話型フラグ、権限モード、および暴走した実行を防ぐコストとターンの制限を使用して、自動化された CI/CD パイプライン向けに Claude Code CLI の呼び出しを構成する。",
+    rule: "無人CIの必須5点セット：非対話『-p (--print)』、機械可読『--output-format json』、最小権限『--allowedTools \"Read,Grep,Glob,Bash(npm test)\"』、暴走防止『--max-turns』＆『--max-budget-usd』。"
+  },
+  {
+    num: 11, rate: "50%", priority: "partial", qIds: ["rev-ccarf-029"],
+    title: "目標11: JSONスキーマと tool_choice による構造化出力強制",
+    text: "定義された JSON スキーマを用いたツール使用を実装して構造化出力への準拠を強制し、会話的な応答が下流の障害を引き起こす場合にツール呼び出しを保証するよう tool_choice を構成する。",
+    rule: "autoでは会話文が混ざり下流パーサーが落ちる。特定スキーマを100%保証するなら『tool_choice: {\"type\": \"tool\", \"name\": \"...\"}』、複数ツールから必ずどれかを呼ばせるなら『{\"type\": \"any\"}』。"
+  },
+  {
+    num: 12, rate: "50%", priority: "partial", qIds: ["rev-ccarf-030"],
+    title: "目標12: 明示的な包含・除外境界によるプロンプト基準設計",
+    text: "明示的な包含と除外の境界を定義し、パフォーマンスが信頼できないカテゴリーでモデルが調査結果や抽出結果を生成することを防ぐプロンプト基準を設計する。",
+    rule: "「重要なものだけ報告せよ」はNG。検出すべき『明示的な包含基準』と、信頼性が低い/リンター管轄の『明示的な除外境界（スタイル好み、自動生成コード、テストモック等）』を正例・反例付きで定義する。"
+  },
+  {
+    num: 13, rate: "50%", priority: "partial", qIds: ["rev-ccarf-031"],
+    title: "目標13: Claude Code 組み込みツール（Grep/Glob/Read/Bash）の選択",
+    text: "特定のコードベースのタスクで必要とされる検索またはファイル操作の性質に基づいて、適切な Claude Code の組み込みツール（Grep、Glob、Read、または Bash）を選択する。",
+    rule: "Bashでfind/grep/catを代用しない！①ファイル名・パス検索＝『Glob』、②ファイル内容の正規表現横断検索＝『Grep』、③指定行範囲の内容確認＝『Read』、④テスト・ビルド等の外部コマンド実行＝『Bash』。"
+  },
+  {
+    num: 14, rate: "50%", priority: "partial", qIds: ["rev-ccarf-032"],
+    title: "目標14: MCP サーバーの統合（スコープ・環境変数認証・検出検証）",
+    text: "正しいサーバースコープを選択し、環境変数の展開による認証を構成し、ツールの検出を検証することで、MCP サーバーを Claude Code およびエージェントアプリケーションに統合する。",
+    rule: "チーム共有は『projectスコープ（.mcp.json）』、個人用は『userスコープ（~/.claude.json）』。秘密情報は直書きせず『${ENV_VAR}』環境変数展開を使い、『claude mcp list』や『/mcp』でツール検出を検証する。"
+  },
+  {
+    num: 15, rate: "67%", priority: "partial", qIds: ["rev-ccarf-033"],
+    title: "目標15: 自己完結型サブエージェントプロンプトの構築",
+    text: "不足しているコンテキストのためにコーディネーターに戻ることなくタスクを完了できるよう、必要なすべての調査結果、構造化データ、およびソースのメタデータを含むサブエージェントのプロンプトを構築する。",
+    rule: "サブエージェントは親の会話履歴を引き継がない（フレッシュなコンテキストで始まる）。「さっきのバグ」等の暗黙参照を廃し、調査結果・構造化データ・正確なファイルパスと行番号をすべて明示して渡す。"
+  },
+  {
+    num: 16, rate: "67%", priority: "partial", qIds: ["rev-ccarf-034"],
+    title: "目標16: 捏造を防ぐ抽出スキーマ設計（optional, nullable, enum）",
+    text: "値を捏造することなく、欠落している情報や曖昧な情報をモデルが正確に表現できるよう、オプションフィールド、null 許容値、および適切な列挙型の定義を備えた抽出スキーマを設計する。",
+    rule: "全項目必須・非null・2択enumはハルシネーション（値の捏造）の元凶。未記載があり得る項目は『nullable / optional』にし、列挙型には『\"unclear\" / \"not_mentioned\"』等の逃げ道を定義する。"
+  },
+  {
+    num: 17, rate: "75%", priority: "partial", qIds: ["rev-ccarf-035"],
+    title: "目標17: 同期 Messages API vs 非同期 Message Batches API の選択",
+    text: "レイテンシーの要件、ワークフローのブロッキング動作、および許容される処理時間枠に基づいて、適切な API 処理モード（同期の Messages API または非同期の Message Batches API）を選択する。",
+    rule: "ユーザーが待つ対話UIやリアルタイムCIゲート（ブロッキング・低遅延必須）は『同期 Messages API』。最大24時間枠が許容される夜間一括処理・大量Eval（非ブロッキング）は50%割引の『Message Batches API』。"
+  },
+  {
+    num: 18, rate: "80%", priority: "partial", qIds: ["rev-ccarf-036"],
+    title: "目標18: 段階的なコードベース探索戦略（Glob/Grep → Read）",
+    text: "コンテキストウィンドウの制約を管理しながら段階的に理解を深める、Grep、Glob、および Read ツールを使用した体系的なコードベース探索戦略を適用する。",
+    rule: "最初から大量のファイルを全文Readしない！①まず軽量な『Glob / Grep』で該当ファイルパスと行番号を絞り込み、②特定箇所のみ『offset / limit 指定の Read』で部分読み取りして段階的に追跡する。"
+  }
+];
+
+function renderCcarfRevengeView(container) {
+  const revQuestions = QUESTIONS_DATA.filter(q => q.exam === 'CCAR-F-REV');
+  const answeredRev = revQuestions.filter(q => AppState.userAnswers[q.id]).length;
+  const correctRev = revQuestions.filter(q => AppState.userAnswers[q.id]?.isCorrect).length;
+  const accuracy = answeredRev > 0 ? Math.round((correctRev / answeredRev) * 100) : 0;
+  const progressPct = revQuestions.length > 0 ? Math.round((answeredRev / revQuestions.length) * 100) : 0;
+
+  // Stats for 0% group (24 questions) and 50-80% group (12 questions)
+  const zeroQs = revQuestions.filter(q => q.scoreRate === '0%');
+  const zeroAnswered = zeroQs.filter(q => AppState.userAnswers[q.id]).length;
+  const zeroCorrect = zeroQs.filter(q => AppState.userAnswers[q.id]?.isCorrect).length;
+
+  const partialQs = revQuestions.filter(q => q.scoreRate !== '0%');
+  const partialAnswered = partialQs.filter(q => AppState.userAnswers[q.id]).length;
+  const partialCorrect = partialQs.filter(q => AppState.userAnswers[q.id]?.isCorrect).length;
+
+  // Apply filters
+  const f = AppState.revengeFilters;
+  const filtered = revQuestions.filter(q => {
+    if (f.priority === 'zero' && q.scoreRate !== '0%') return false;
+    if (f.priority === 'partial' && q.scoreRate === '0%') return false;
+    if (f.category !== 'all' && q.category !== f.category) return false;
+    if (f.status === 'unanswered' && AppState.userAnswers[q.id]) return false;
+    if (f.status === 'incorrect' && (!AppState.userAnswers[q.id] || AppState.userAnswers[q.id].isCorrect)) return false;
+    return true;
+  });
+
+  const categories = [
+    { key: 'all', label: '全弱点領域 (36問)' },
+    { key: 'マルチエージェント制御・並列・状態永続化', label: '① マルチエージェント・並列・状態永続化 (15問)' },
+    { key: 'Claude Code構成・CI/CD・組み込みツール', label: '② Claude Code構成・CI/CD・ツール選択 (10問)' },
+    { key: '矛盾データ統合・コンテキスト最適化・反復改善', label: '③ 矛盾統合・コンテキスト最適化・反復改善 (9問)' },
+    { key: '構造化出力・tool_choice・MCP統合・Batch', label: '④ 構造化出力・tool_choice・MCP・Batch (5問)' }
+  ];
+
+  // Predicted score simulation based on mastering these 36 questions
+  const masteredBonus = Math.round((correctRev / Math.max(revQuestions.length, 1)) * 220);
+  const projectedScore = Math.min(980, 690 + masteredBonus);
+
+  let html = `
+    <!-- Score Report Diagnostic Hero -->
+    <div class="view-hero" style="background: linear-gradient(135deg, rgba(229, 62, 62, 0.16), rgba(30, 41, 59, 0.4)); border: 1px solid rgba(245, 101, 101, 0.4);">
+      <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap;">
+        <span class="view-hero-badge" style="background: #e53e3e; color: #fff;">CCAR-F スコアレポート完全連動</span>
+        <span style="font-size: 12px; background: rgba(245, 101, 101, 0.18); color: #fc8181; padding: 3px 10px; border-radius: var(--radius-full); font-weight: 700;">
+          前回スコア: 690点 / 合格基準: 720点（あと30点＝わずか2問！）
+        </span>
+        <span style="font-size: 12px; background: rgba(72, 187, 120, 0.18); color: #68d391; padding: 3px 10px; border-radius: var(--radius-full); font-weight: 700;">
+          全37目標中 19目標で100%満点達成済み！
+        </span>
+      </div>
+
+      <h2 style="font-size: 23px; font-weight: 800; margin-bottom: 8px;">
+        🔥 CCAR-F 弱点克服リベンジ特訓 (全36問・失点18目標ピンポイント対策)
+      </h2>
+      <p style="margin-bottom: 16px; line-height: 1.65; color: var(--text-secondary);">
+        2026年11月7日の公式スコアレポート（690点）を徹底解剖し、<strong>正答率0%だった8つの試験目標（計24問）</strong>と<strong>正答率50%〜80%だった10の試験目標（計12問）</strong>に1対1で完全対応させた専用特訓ページです。<br>
+        すでに19個の試験目標で100%満点を取れているため、<strong>「0%だった8項目」の判断軸を半分押さえるだけで720点を大幅に超えて850点以上で余裕合格</strong>できます！
+      </p>
+
+      <!-- Diagnostic Metrics Grid -->
+      <div class="ccdv-stats-grid" style="margin-bottom: 14px;">
+        <div class="ccdv-stat-card" style="border-color: rgba(245, 101, 101, 0.35);">
+          <div class="label">前回スコア / 合格点</div>
+          <div class="value" style="color: #fc8181;">690 <span style="font-size: 13px; color: var(--text-muted);">/ 720点</span></div>
+        </div>
+        <div class="ccdv-stat-card" style="border-color: rgba(72, 187, 120, 0.35);">
+          <div class="label">特訓後の推定到達スコア</div>
+          <div class="value" style="color: var(--success);">${projectedScore} <span style="font-size: 13px; color: var(--text-muted);">/ 1000点</span></div>
+        </div>
+        <div class="ccdv-stat-card" style="border-color: rgba(245, 101, 101, 0.45);">
+          <div class="label">🔴 前回0%の最優先8目標</div>
+          <div class="value" style="color: #fc8181;">${zeroCorrect} / ${zeroQs.length}問正解 <span style="font-size: 12px; color: var(--text-muted);">(${zeroAnswered}済)</span></div>
+        </div>
+        <div class="ccdv-stat-card" style="border-color: rgba(236, 201, 75, 0.45);">
+          <div class="label">🟡 前回50〜80%の10目標</div>
+          <div class="value" style="color: #ecc94b;">${partialCorrect} / ${partialQs.length}問正解 <span style="font-size: 12px; color: var(--text-muted);">(${partialAnswered}済)</span></div>
+        </div>
+        <div class="ccdv-stat-card">
+          <div class="label">特訓36問 全体進捗</div>
+          <div class="value" style="color: var(--accent-primary);">${answeredRev} / ${revQuestions.length}問 (${progressPct}%)</div>
+        </div>
+        <div class="ccdv-stat-card">
+          <div class="label">特訓36問 正答率</div>
+          <div class="value" style="color: ${accuracy >= 80 ? 'var(--success)' : 'var(--accent-primary)'};">${accuracy}% (${correctRev}問正解)</div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+        <button class="btn-primary" style="background: #e53e3e; border-color: #e53e3e;" onclick="toggleRevengeMatrix()">
+          📋 ${f.showMatrix ? '弱点18項目の「絶対正解ルール早見表」を折りたたむ' : '弱点18項目の「絶対正解ルール早見表」を開く'}
+        </button>
+        <button class="btn-secondary" onclick="setRevengePriorityFilter('zero')">
+          🔴 前回0%の最優先24問に絞る
+        </button>
+        <button class="btn-secondary" onclick="setRevengePriorityFilter('all')">
+          全36問を表示
+        </button>
+        ${answeredRev > 0 ? `
+          <button class="btn-reset-exam" style="margin-left: auto;" onclick="resetExamProgress('CCAR-F-REV')">
+            ${Icons.refresh} 弱点特訓(36問)の履歴をリセット
+          </button>
+        ` : ''}
+      </div>
+    </div>
+
+    <!-- Collapsible 18 Weak Objectives Decision Matrix -->
+    ${f.showMatrix ? `
+      <div class="question-card" style="margin-bottom: 24px; border-left: 4px solid #e53e3e;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
+          <div>
+            <h3 style="font-size: 17px; font-weight: 800; color: var(--text-primary); margin: 0;">
+              🎯 スコアレポート失点18項目「本番で2択に迷わない1行絶対判断マトリクス」
+            </h3>
+            <p style="font-size: 12.5px; color: var(--text-secondary); margin: 4px 0 0 0;">
+              各カードの「問題へジャンプ」を押すと、その試験目標に対応する特訓問題へ直接スクロールします。
+            </p>
+          </div>
+          <button class="btn-secondary" style="font-size: 12px; padding: 5px 12px;" onclick="toggleRevengeMatrix()">
+            ✕ 早見表を閉じる
+          </button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 12px;">
+          ${CCARF_WEAK_OBJECTIVES.map(obj => {
+            const isZero = obj.rate === '0%';
+            const solvedCount = obj.qIds.filter(id => AppState.userAnswers[id]?.isCorrect).length;
+            const totalObjQs = obj.qIds.length;
+            const allSolved = solvedCount === totalObjQs;
+            return `
+              <div style="background: var(--bg-secondary); border: 1px solid ${allSolved ? 'rgba(72, 187, 120, 0.5)' : isZero ? 'rgba(245, 101, 101, 0.35)' : 'rgba(236, 201, 75, 0.3)'}; border-radius: var(--radius-md); padding: 12px 14px; display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 6px;">
+                    <span style="font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: var(--radius-full); background: ${isZero ? 'rgba(229, 62, 62, 0.2)' : 'rgba(236, 201, 75, 0.2)'}; color: ${isZero ? '#fc8181' : '#ecc94b'};">
+                      前回正答率: ${obj.rate} ${isZero ? '🔴 最優先' : '🟡 準優先'}
+                    </span>
+                    <span style="font-size: 11px; font-weight: 700; color: ${allSolved ? 'var(--success)' : 'var(--text-muted)'};">
+                      ${allSolved ? '✓ 克服完了!' : `習得: ${solvedCount}/${totalObjQs}問`}
+                    </span>
+                  </div>
+                  <div style="font-size: 13.5px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px;">
+                    ${escapeHtml(obj.title)}
+                  </div>
+                  <div style="font-size: 11.5px; color: var(--text-muted); line-height: 1.45; margin-bottom: 8px; padding: 6px 8px; background: var(--bg-tertiary); border-radius: 6px;">
+                    <strong>【試験目標原文】</strong> ${escapeHtml(obj.text)}
+                  </div>
+                  <div style="font-size: 12.5px; color: var(--text-primary); line-height: 1.55; margin-bottom: 10px; padding-left: 8px; border-left: 3px solid var(--accent-primary);">
+                    <strong style="color: var(--accent-primary);">💡 絶対正解ルール:</strong> ${escapeHtml(obj.rule)}
+                  </div>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 6px; margin-top: 4px;">
+                  ${obj.qIds.map((qid, i) => {
+                    const ans = AppState.userAnswers[qid];
+                    const badgeColor = ans ? (ans.isCorrect ? 'var(--success)' : 'var(--danger)') : 'var(--text-secondary)';
+                    return `
+                      <button class="btn-secondary" style="font-size: 11px; padding: 4px 9px; border-color: ${badgeColor}; color: ${badgeColor};" onclick="jumpToRevengeQuestion('${qid}')">
+                        問${qid.replace('rev-ccarf-0', '').replace('rev-ccarf-', '')} ${ans ? (ans.isCorrect ? '✓' : '✗') : ''}
+                      </button>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    ` : ''}
+
+    <!-- Status & Reset Bar -->
+    <div class="practice-exam-status-bar" style="border-left-color: #e53e3e;">
+      <div class="exam-status-info">
+        <span class="status-badge-inline" style="background: rgba(229, 62, 62, 0.18); color: #fc8181;">CCAR-F 弱点克服特訓</span>
+        <span class="status-metric-text">
+          解答進捗: <strong>${answeredRev}</strong> / ${revQuestions.length}問 (${progressPct}%) 
+          ${answeredRev > 0 ? `| 正答率: <strong>${accuracy}%</strong> (${correctRev}問正解)` : ''}
+        </span>
+      </div>
+      <div class="status-actions-group">
+        <button class="btn-reset-exam" ${answeredRev === 0 ? 'disabled' : ''} onclick="resetExamProgress('CCAR-F-REV')">
+          ${Icons.refresh} 特訓36問の解答をリセット
+        </button>
+      </div>
+    </div>
+
+    <!-- Priority Filter Pills -->
+    <div class="exam-selector-pills" style="margin-bottom: 10px;">
+      <button class="exam-pill ${f.priority === 'all' ? 'active' : ''}" onclick="setRevengePriorityFilter('all')">
+        すべて表示 (36問)
+      </button>
+      <button class="exam-pill ${f.priority === 'zero' ? 'active' : ''}" onclick="setRevengePriorityFilter('zero')" style="${f.priority === 'zero' ? 'background: #e53e3e; border-color: #e53e3e;' : 'border-color: #fc8181; color: #fc8181;'}">
+        🔴 前回正答率 0% の最優先8目標 (24問)
+      </button>
+      <button class="exam-pill ${f.priority === 'partial' ? 'active' : ''}" onclick="setRevengePriorityFilter('partial')" style="${f.priority === 'partial' ? '' : 'border-color: #ecc94b; color: #ecc94b;'}">
+        🟡 前回正答率 50%〜80% の準優先10目標 (12問)
+      </button>
+    </div>
+
+    <!-- Category & Status Filter Bar -->
+    <div class="practice-filters" style="margin-bottom: 20px;">
+      <div class="filter-group" style="flex-wrap: wrap; gap: 10px;">
+        <label style="font-size: 13px; font-weight: 600; color: var(--text-muted);">弱点カテゴリ:</label>
+        <select class="filter-select" onchange="setRevengeCategoryFilter(this.value)">
+          ${categories.map(c => `
+            <option value="${c.key}" ${f.category === c.key ? 'selected' : ''}>${c.label}</option>
+          `).join('')}
+        </select>
+
+        <label style="font-size: 13px; font-weight: 600; color: var(--text-muted); margin-left: 8px;">解答状態:</label>
+        <select class="filter-select" onchange="setRevengeStatusFilter(this.value)">
+          <option value="all" ${f.status === 'all' ? 'selected' : ''}>すべて</option>
+          <option value="unanswered" ${f.status === 'unanswered' ? 'selected' : ''}>未解答のみ</option>
+          <option value="incorrect" ${f.status === 'incorrect' ? 'selected' : ''}>要復習（誤答）のみ</option>
+        </select>
+      </div>
+
+      <div style="font-size: 13px; font-weight: 600; color: var(--text-muted);">
+        表示中: <span style="color: var(--accent-primary); font-size: 15px;">${filtered.length}</span> 問
+      </div>
+    </div>
+
+    <!-- Questions List -->
+    <div class="questions-list">
+      ${filtered.length === 0 ? `
+        <div class="question-card" style="text-align: center; padding: 40px;">
+          <p style="color: var(--text-muted); font-size: 15px;">条件に合致する問題がありません（フィルターを「すべて」に戻してください）。</p>
+        </div>
+      ` : filtered.map((q, idx) => renderQuestionCard(q, idx)).join('')}
+    </div>
+  `;
+
+  container.innerHTML = html;
+}
+
+function toggleRevengeMatrix() {
+  AppState.revengeFilters.showMatrix = !AppState.revengeFilters.showMatrix;
+  renderApp();
+}
+
+function setRevengePriorityFilter(priority) {
+  AppState.revengeFilters.priority = priority;
+  renderApp();
+}
+
+function setRevengeCategoryFilter(category) {
+  AppState.revengeFilters.category = category;
+  renderApp();
+}
+
+function setRevengeStatusFilter(status) {
+  AppState.revengeFilters.status = status;
+  renderApp();
+}
+
+function jumpToRevengeQuestion(questionId) {
+  AppState.revengeFilters.priority = 'all';
+  AppState.revengeFilters.category = 'all';
+  AppState.revengeFilters.status = 'all';
+  renderApp();
+  setTimeout(() => {
+    const el = document.getElementById(`qcard-${questionId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.style.boxShadow = '0 0 0 2px #e53e3e';
+      setTimeout(() => { el.style.boxShadow = ''; }, 2200);
+    }
+  }, 60);
+}
+
+// ==========================================================================
 // 2. TEXTBOOK VIEW
 // ==========================================================================
 function renderTextbookView(container) {
@@ -780,6 +1174,7 @@ function renderPracticeView(container) {
   const countCCAR = QUESTIONS_DATA.filter(q => q.exam === 'CCAR-F').length;
   const countCCARP = QUESTIONS_DATA.filter(q => q.exam === 'CCAR-P').length;
   const countPrep = QUESTIONS_DATA.filter(q => q.specialTag === 'Preporato厳選').length;
+  const countRev = QUESTIONS_DATA.filter(q => q.exam === 'CCAR-F-REV').length;
 
   const answeredMinorun = QUESTIONS_DATA.filter(q => q.specialTag === 'みのるん式特訓' && AppState.userAnswers[q.id]).length;
   const answeredCCAO = QUESTIONS_DATA.filter(q => q.exam === 'CCAO-F' && AppState.userAnswers[q.id]).length;
@@ -787,6 +1182,7 @@ function renderPracticeView(container) {
   const answeredCCAR = QUESTIONS_DATA.filter(q => q.exam === 'CCAR-F' && AppState.userAnswers[q.id]).length;
   const answeredCCARP = QUESTIONS_DATA.filter(q => q.exam === 'CCAR-P' && AppState.userAnswers[q.id]).length;
   const answeredPrep = QUESTIONS_DATA.filter(q => q.specialTag === 'Preporato厳選' && AppState.userAnswers[q.id]).length;
+  const answeredRev = QUESTIONS_DATA.filter(q => q.exam === 'CCAR-F-REV' && AppState.userAnswers[q.id]).length;
   const totalAnsweredAll = Object.keys(AppState.userAnswers).length;
 
   // Selected Exam stats for Status & Reset Bar
@@ -803,6 +1199,10 @@ function renderPracticeView(container) {
     examTargetQs = QUESTIONS_DATA.filter(q => q.specialTag === 'Preporato厳選');
     currentExamLabel = '🎯 Preporato厳選 CCA-F実戦シナリオ';
     currentExamShort = 'Preporato厳選';
+  } else if (currentExamFilter === 'CCAR-F-REV') {
+    examTargetQs = QUESTIONS_DATA.filter(q => q.exam === 'CCAR-F-REV');
+    currentExamLabel = '🔥 CCAR-F スコアレポート弱点特訓';
+    currentExamShort = 'CCAR-F 弱点特訓';
   } else if (currentExamFilter === 'all') {
     examTargetQs = QUESTIONS_DATA;
     currentExamLabel = '全資格 総合';
@@ -820,7 +1220,7 @@ function renderPracticeView(container) {
 
   let html = `
     <div class="view-hero">
-      <span class="view-hero-badge">Question Bank (全${QUESTIONS_DATA.length}問・4資格＋Preporato厳選)</span>
+      <span class="view-hero-badge">Question Bank (全${QUESTIONS_DATA.length}問・4資格＋CCAR-F弱点特訓＋Preporato厳選)</span>
       <h2>Claude認定 資格別 実践問題集</h2>
       <p>本番同様のシナリオ問題、XMLプロンプト、エージェント設計、MCP、ガバナンスを徹底演習。全問に公式ドキュメント準拠の詳細解説と引っかけ対策付き。</p>
     </div>
@@ -828,6 +1228,7 @@ function renderPracticeView(container) {
     <!-- Exam Selector Pills -->
     <div class="exam-selector-pills">
       <button class="exam-pill ${AppState.practiceFilters.exam === 'all' ? 'active' : ''}" onclick="setPracticeExamFilter('all')">全問題 (${totalAnsweredAll}/${QUESTIONS_DATA.length})</button>
+      <button class="exam-pill ${AppState.practiceFilters.exam === 'CCAR-F-REV' ? 'active' : ''}" onclick="setPracticeExamFilter('CCAR-F-REV')" style="${AppState.practiceFilters.exam === 'CCAR-F-REV' ? 'background: #e53e3e; border-color: #e53e3e;' : 'border-color: #fc8181; color: #fc8181;'}">🔥 CCAR-F 弱点特訓 (${answeredRev}/${countRev}問)</button>
       <button class="exam-pill ${AppState.practiceFilters.exam === 'CCDV-F' ? 'active' : ''}" onclick="setPracticeExamFilter('CCDV-F')">CCDV-F (${answeredCCDV}/${countCCDV})</button>
       <button class="exam-pill ${AppState.practiceFilters.exam === 'CCAO-F' ? 'active' : ''}" onclick="setPracticeExamFilter('CCAO-F')">CCAO-F (${answeredCCAO}/${countCCAO})</button>
       <button class="exam-pill ${AppState.practiceFilters.exam === 'CCAR-F' ? 'active' : ''}" onclick="setPracticeExamFilter('CCAR-F')">CCAR-F (${answeredCCAR}/${countCCAR}問 ★公式6大シナリオ)</button>
@@ -951,10 +1352,15 @@ function renderQuestionCard(q, displayIndex) {
     <div class="question-card" id="qcard-${q.id}">
       <div class="question-card-header">
         <div class="question-meta">
-          <span class="badge-exam">${q.exam}</span>
+          <span class="badge-exam">${q.exam === 'CCAR-F-REV' ? 'CCAR-F リベンジ' : q.exam}</span>
           ${q.specialTag ? `
             <span style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: var(--radius-sm); background: rgba(236, 201, 75, 0.2); color: #ecc94b; border: 1px solid rgba(236, 201, 75, 0.4);">
               🔥 ${q.specialTag}
+            </span>
+          ` : ''}
+          ${q.scoreRate ? `
+            <span style="font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: var(--radius-sm); background: ${q.scoreRate === '0%' ? 'rgba(229, 62, 62, 0.22)' : 'rgba(236, 201, 75, 0.2)'}; color: ${q.scoreRate === '0%' ? '#fc8181' : '#ecc94b'}; border: 1px solid ${q.scoreRate === '0%' ? 'rgba(245, 101, 101, 0.5)' : 'rgba(236, 201, 75, 0.45)'};">
+              ${q.scoreRate === '0%' ? '🔴' : '🟡'} 前回スコアレポート正答率: ${q.scoreRate}
             </span>
           ` : ''}
           <span class="badge-category">${q.category}</span>
@@ -969,6 +1375,12 @@ function renderQuestionCard(q, displayIndex) {
           </button>
         </div>
       </div>
+
+      ${q.objectiveText ? `
+        <div style="margin-bottom: 12px; padding: 8px 12px; border-radius: 6px; background: var(--bg-tertiary); border-left: 3px solid ${q.scoreRate === '0%' ? '#e53e3e' : '#ecc94b'}; font-size: 12px; color: var(--text-secondary); line-height: 1.5;">
+          <strong style="color: var(--text-primary);">🎯 ${escapeHtml(q.objectiveTitle || '対象試験目標')}:</strong> ${escapeHtml(q.objectiveText)}
+        </div>
+      ` : ''}
 
       <div class="question-text">
         <span style="color: var(--accent-primary); font-weight: 700; margin-right: 6px;">Q${displayIndex + 1}.</span>
