@@ -125,5 +125,181 @@ const CHEATSHEET_DATA = {
    - 【正解】正解のアルファベット
    - 【公式解説】なぜそれが正解か、なぜ他の選択肢が不適切かの詳細な解説
    - 【⚠️引っかけポイント】受験者が陥りやすい典型的な誤解の解説`
-  }
+  },
+
+  decisionTrees: [
+    {
+      id: "agent-architecture",
+      title: "1. ワークフロー vs 自律エージェントの選定ツリー",
+      subtitle: "Anthropic基本原則: 「常に最もシンプルな決定論的ワークフローから始めよ」",
+      principle: "複雑な自律エージェントは予測不能性とコスト・レイテンシを増加させます。固定ステップで解けるなら決定論的コードで制御するワークフローを最優先します。",
+      flow: [
+        {
+          step: "Q1. タスクの実行手順や入力から出力へのフローは事前に予測・定義可能か？",
+          branches: [
+            {
+              answer: "YES ➜ 【決定論的ワークフロー (Workflows)】を選択",
+              tag: "Deterministic",
+              badgeColor: "var(--info)",
+              subConditions: [
+                { cond: "ステップ間に固定の逐次依存関係がある", result: "Prompt Chaining（連鎖）", desc: "前の出力が次の入力になる直列パイプライン。" },
+                { cond: "入力タイプや意図によって処理を振り分ける", result: "Routing（ルーティング）", desc: "軽量モデル（Haiku）で分類し、専門プロンプト/モデルへ分岐。" },
+                { cond: "独立した複数サブタスクを同時実行してレイテンシ短縮", result: "Parallelization (Sectioning)", desc: "複数ファイル・複数章の並列処理（単一ターン内並列ツール呼び出し）。" },
+                { cond: "精度・安全性の向上のため同一タスクを多角的に検証", result: "Parallelization (Voting)", desc: "複数視点・モデルで並列実行し、多数決や合意形成を行う。" }
+              ]
+            },
+            {
+              answer: "NO ➜ 【自律エージェント (Autonomous Agents)】を選択",
+              tag: "Autonomous",
+              badgeColor: "var(--accent-primary)",
+              subConditions: [
+                { cond: "タスクのサブステップが事前に予測できず、動的に分解・委任する必要がある", result: "Orchestrator-Workers（司令塔）", desc: "中央のOrchestratorが動的に計画を立て、Workerを並行実行して結果を集約。" },
+                { cond: "明確な定量的評価基準（テスト、リント、スキーマ）があり、出力を反復洗練する", result: "Evaluator-Optimizer（評価ループ）", desc: "Generatorが出力し、Evaluatorが具体的な失敗と入出力例をフィードバックして改善。" }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: "review-execution",
+      title: "2. レビュー＆実行アーキテクチャの選択ツリー（人手承認の要否）",
+      subtitle: "タスクの「リスク（破壊性）」と「承認要件」で3つのモードを厳密に使い分ける",
+      principle: "破壊的変更や多段階の依存がある処理に直接実行を適用するのは厳禁。事前の計画承認またはフェーズ単位の承認ゲートを設けます。",
+      modes: [
+        {
+          name: "直接実行 (Direct Execution)",
+          risk: "低リスク / 可逆的",
+          approval: "人手承認なし（全自動）",
+          badge: "Low Risk",
+          badgeBg: "rgba(16, 185, 129, 0.15)",
+          badgeColor: "var(--success)",
+          useCase: "読み取り専用のコードベース探索、情報の要約、ドキュメントの初期ドラフト作成、非破壊的な静的解析。"
+        },
+        {
+          name: "プランモード (Plan Mode)",
+          risk: "中〜高リスク / 破壊的・大規模",
+          approval: "実行前に人間が計画（Plan）を承認",
+          badge: "Approval First",
+          badgeBg: "rgba(245, 158, 11, 0.15)",
+          badgeColor: "var(--warning)",
+          useCase: "大規模リファクタリング、複数ファイルの一括書き換え、DBマイグレーションスクリプト適用。エージェントがまず探索して変更手順書を生成し、人間の承認後に実行。"
+        },
+        {
+          name: "マルチフェーズワークフロー (Multi-phase Workflow)",
+          risk: "高リスク / 段階的依存関係",
+          approval: "フェーズごとの段階的ゲート承認",
+          badge: "Gated Pipeline",
+          badgeBg: "rgba(239, 68, 68, 0.15)",
+          badgeColor: "var(--danger)",
+          useCase: "「要件定義 ➜ アーキテクチャ設計 ➜ 実装 ➜ テスト ➜ デプロイ」のように段階ごとの成果物レビューが必須の複雑パイプライン。"
+        }
+      ]
+    },
+    {
+      id: "claude-code-config",
+      title: "3. Claude Code 構成メカニズム選定マトリクス",
+      subtitle: "「何を」「どこに」「どのスコープで」設定すべきかの公式ガイドライン",
+      principle: "グローバルに書きすぎるとコンテキストを浪費し、特定ツールに寄りすぎると汎用性を失います。スコープの原則を守ります。",
+      mechanisms: [
+        {
+          target: "CLAUDE.md",
+          scope: "リポジトリ全体 / チーム共有",
+          when: "プロジェクト全体の規約、ビルド・テストの実行コマンド、普遍的なコーディングスタイルガイド。",
+          timing: "セッション開始時に全コンテキストへ永続ロード。"
+        },
+        {
+          target: ".claude/rules/*.md (globパターン)",
+          scope: "特定ディレクトリ・拡張子限定",
+          when: "特定のファイル群（例: src/api/** のみ適用するAPI規約、*.test.ts にのみ適用するモック規約）。",
+          timing: "該当するファイルが参照・編集される時に自動ロード。"
+        },
+        {
+          target: "Skills (スラッシュコマンド)",
+          scope: "オンデマンド定型タスク",
+          when: "特定のリサーチやデプロイなど、必要な時だけ呼び出す手順。context: fork を指定するとサブエージェントで分離実行され、メインのセッション状態を汚染しない。",
+          timing: "ユーザーまたはエージェントがコマンドを実行した時のみ。"
+        },
+        {
+          target: "Hooks (フック)",
+          scope: "自動ガードレール / 強制検証",
+          when: "ツール実行前後に強制するLinter、型チェック、セキュリティスキャナー、Pre-commitフック。",
+          timing: "特定のツール（Edit, Write, Bash等）の実行前後。"
+        },
+        {
+          target: "CI/CD 非対話フラグ",
+          scope: "自動化パイプライン",
+          when: "人手介入のないCI/CD環境でのClaude Code CLI呼び出し。-p（非対話モード）、--dangerously-skip-permissions、暴走防止のコスト・ターン制限。",
+          timing: "GitHub ActionsやJenkins等の自動ジョブ。"
+        }
+      ]
+    },
+    {
+      id: "context-state",
+      title: "4. コンテキスト最適化 & 状態永続化の鉄則",
+      subtitle: "長文脈セッションや中断・再開でコンテキスト喪失を防ぐベストプラクティス",
+      principle: "単なる自然文要約は重要な行番号や制約を失います。構造化オブジェクトと外部マニフェストを活用します。",
+      rules: [
+        {
+          situation: "会話が実用トークン上限（コンテキスト溢れ）に達した",
+          antiPattern: "❌ 単純な全会話の自然文要約（細かい制約やコード行が消失）や、古いターンの機械的削除（前提の崩壊）。",
+          bestPractice: "⭕ 【構造化された状態オブジェクト】（キー変数、決定事項、未解決課題）を抽出し、【選択的保持（Selective Retention）】で直近のタスクに必要な情報のみを次ターンに注入する。"
+        },
+        {
+          situation: "マルチエージェントパイプラインの中断と再開",
+          antiPattern: "❌ 再開時に最初から全ファイルを再探索・再読み込みする（重複コストとレイテンシの浪費）。",
+          bestPractice: "⭕ ファイルシステム上の【マニフェストファイル（JSON/YAML）やスクラッチパッド】に完了済みタスク、発見事項、未着手タスクを記録・永続化し、変更のあったファイルのみ対象を絞って再分析する。"
+        }
+      ]
+    },
+    {
+      id: "uncertainty-integration",
+      title: "5. 不確実性・矛盾データの統合エージェント（Epistemic Uncertainty）",
+      subtitle: "複数ソースやサブエージェントから矛盾した情報が返ってきたときの判断基準",
+      principle: "モデルに「無理に1つの結論を出させる」のはハルシネーションの元。不確実性をメタデータとして保持します。",
+      rules: [
+        {
+          situation: "サブエージェントAとサブエージェントBの調査結果に矛盾がある",
+          antiPattern: "❌ 多数決で1つの主張に決め打つ、または平均化・適当に折衷して断定的な単一の報告を作成する。",
+          bestPractice: "⭕ 【確立された調査結果（Facts）】と【議論の余地がある主張（Claims）】を明確に分離・区別し、ソースレベルのメタデータと不確実性の度合いを保持したまま統合レポートを出力する。"
+        }
+      ]
+    },
+    {
+      id: "tool-choice-schema",
+      title: "6. ツール呼び出し & スキーマ設計の必須テクニック",
+      subtitle: "構造化出力の100%保証とハルシネーション（捏造）の完全防止",
+      principle: "Claudeが会話的な余計なおしゃべりをせず、確実にスキーマ通りに出力するよう制御します。",
+      rules: [
+        {
+          situation: "構造化JSON出力を確実に得たい（会話テキストの混入を完全防止）",
+          antiPattern: "❌ プロンプトで「JSONのみを出力してください」と懇願するだけ（解説文やマークダウンが混ざるリスク）。",
+          bestPractice: "⭕ tool_choice: {\"type\": \"tool\", \"name\": \"extract_data\"} を指定し、特定ツールの呼び出しを強制する。"
+        },
+        {
+          situation: "文書内に該当情報が存在しない・曖昧な可能性がある",
+          antiPattern: "❌ 必須フィールドにしておくと、モデルが空想で値を捏造（ハルシネーション）してしまう。",
+          bestPractice: "⭕ スキーマに optional、null 許容、および \"UNKNOWN\" / \"NOT_FOUND\" などの明示的な列挙型（enum）を用意する。"
+        },
+        {
+          situation: "独立した複数タスク（別々ファイルの読取、複数クエリ検索）の実行",
+          antiPattern: "❌ 1回ずつ順にツールを呼んでモデル応答を待つ（往復回数が増えレイテンシが爆発）。",
+          bestPractice: "⭕ 【並列ツール呼び出し（Parallel Tool Use）】を有効にし、単一ターン内で複数ツールを一括発行してクライアント側で並行処理する。"
+        }
+      ]
+    },
+    {
+      id: "evaluator-optimizer",
+      title: "7. 反復改善ワークフロー（Evaluator-Optimizer）のフィードバック作法",
+      subtitle: "モデルに効果的な修正を行わせるための公式フィードバック設計",
+      principle: "抽象的なダメ出しは修正の迷走を招きます。具体的でピンポイントな根拠を与えます。",
+      rules: [
+        {
+          situation: "EvaluatorがGenerator（生成エージェント）に修正指示をフィードバックする",
+          antiPattern: "❌ 「もっと品質を上げてください」「全体的におかしいです」といった抽象的な指示や、テストの全ログを無加工で丸投げする。",
+          bestPractice: "⭕ 【具体的な入出力の例（Examples）】＋【特定の失敗に対する的を絞ったフィードバック（Targeted Feedback）】＋【統合的な問題の説明（Synthesized Problem Description）】の3点をセットで提供する。"
+        }
+      ]
+    }
+  ]
 };

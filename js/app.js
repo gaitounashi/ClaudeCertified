@@ -2030,6 +2030,142 @@ function renderCheatsheetView(container) {
     </div>
 
     <div class="cheatsheet-grid">
+      <!-- 0. Anthropic Official Architecture Decision Trees -->
+      ${sheet.decisionTrees && sheet.decisionTrees.length > 0 ? `
+        <div class="dt-hero">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
+            <div>
+              <span class="badge" style="background: rgba(99, 102, 241, 0.18); color: var(--accent-primary); font-weight: 700; margin-bottom: 8px; display: inline-flex; align-items: center; gap: 4px;">
+                🔥 CCAR-F / CCAR-P / CCDV-F 直前必読
+              </span>
+              <h2 style="font-size: 21px; font-weight: 800; color: var(--text-primary); margin: 0 0 6px 0; display: flex; align-items: center; gap: 8px;">
+                ${Icons.compass} Anthropic公式「アーキテクチャ判断ツリー＆決定基準」
+              </h2>
+              <p style="font-size: 13.5px; color: var(--text-secondary); margin: 0; line-height: 1.6;">
+                公式ガイド『Building Effective Agents』やClaude Code固有ドクトリンに基づく決定基準。微妙な選択肢の迷いを断ち切る7大ツリー。
+              </p>
+            </div>
+          </div>
+          <div class="dt-nav-pills">
+            ${sheet.decisionTrees.map((t, idx) => `
+              <button class="dt-pill-btn" onclick="document.getElementById('dt-${t.id}').scrollIntoView({behavior: 'smooth'})">
+                <span>${idx + 1}.</span> ${t.title.replace(/^[0-9]+\.\s*/, '')}
+              </button>
+            `).join('')}
+          </div>
+        </div>
+
+        ${sheet.decisionTrees.map((tree, idx) => {
+          let bodyHtml = '';
+
+          if (tree.id === 'agent-architecture') {
+            bodyHtml = `
+              <div class="dt-tree-flow">
+                ${tree.flow.map(f => `
+                  <div style="background: var(--bg-tertiary); padding: 12px 14px; border-radius: var(--radius-md); font-weight: 700; font-size: 14px; color: var(--text-primary); border-left: 4px solid var(--accent-primary);">
+                    ${f.step}
+                  </div>
+                  <div class="dt-branches-grid">
+                    ${f.branches.map(b => `
+                      <div class="dt-branch-col">
+                        <div class="dt-branch-head">
+                          <span style="color: ${b.badgeColor};">${b.answer}</span>
+                          <span class="badge" style="background: ${b.badgeColor}22; color: ${b.badgeColor};">${b.tag}</span>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
+                          ${b.subConditions.map(sub => `
+                            <div class="dt-sub-item">
+                              <div class="dt-sub-cond">${sub.cond}</div>
+                              <div class="dt-sub-result">➔ ${sub.result}</div>
+                              <div class="dt-sub-desc">${sub.desc}</div>
+                            </div>
+                          `).join('')}
+                        </div>
+                      </div>
+                    `).join('')}
+                  </div>
+                `).join('')}
+              </div>
+            `;
+          } else if (tree.id === 'review-execution') {
+            bodyHtml = `
+              <div class="dt-modes-grid">
+                ${tree.modes.map(m => `
+                  <div class="dt-mode-card">
+                    <div class="dt-mode-top">
+                      <div class="dt-mode-title">${m.name}</div>
+                      <span class="badge" style="background: ${m.badgeBg}; color: ${m.badgeColor}; font-weight: 700;">${m.badge}</span>
+                    </div>
+                    <div style="font-size: 12.5px; color: var(--text-secondary);">
+                      <strong>リスク度:</strong> ${m.risk}
+                    </div>
+                    <div style="font-size: 12.5px; color: var(--text-primary); background: var(--bg-card); padding: 8px 10px; border-radius: var(--radius-sm); border-left: 3px solid ${m.badgeColor};">
+                      <strong>人手承認:</strong> ${m.approval}
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin-top: auto;">
+                      <strong>適用例:</strong> ${m.useCase}
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            `;
+          } else if (tree.id === 'claude-code-config') {
+            bodyHtml = `
+              <div class="markdown-content dt-table-wrapper">
+                <table>
+                  <thead><tr><th>構成メカニズム</th><th>適用スコープ</th><th>使い分けの場面</th><th>ロード・適用タイミング</th></tr></thead>
+                  <tbody>
+                    ${tree.mechanisms.map(m => `
+                      <tr>
+                        <td><code style="color: var(--accent-primary); font-weight: 700;">${m.target}</code></td>
+                        <td><strong style="color: var(--text-primary); font-size: 12.5px;">${m.scope}</strong></td>
+                        <td style="font-size: 12.5px;">${m.when}</td>
+                        <td style="font-size: 12px; color: var(--text-muted);">${m.timing}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            `;
+          } else {
+            bodyHtml = `
+              <div style="display: flex; flex-direction: column; gap: 12px;">
+                ${tree.rules.map(r => `
+                  <div class="dt-contrast-card">
+                    <div class="dt-contrast-situation">
+                      ${Icons.target} 状況: ${r.situation}
+                    </div>
+                    <div class="dt-contrast-box">
+                      <div class="dt-box-bad">
+                        ${r.antiPattern}
+                      </div>
+                      <div class="dt-box-good">
+                        ${r.bestPractice}
+                      </div>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            `;
+          }
+
+          return `
+            <div class="dt-card" id="dt-${tree.id}">
+              <div class="dt-card-header">
+                <div>
+                  <h3 class="dt-card-title">${tree.title}</h3>
+                  <p class="dt-card-subtitle">${tree.subtitle}</p>
+                </div>
+              </div>
+              <div class="dt-principle-box">
+                <strong>💡 Anthropic公式の鉄則:</strong> ${tree.principle}
+              </div>
+              ${bodyHtml}
+            </div>
+          `;
+        }).join('')}
+      ` : ''}
+
       <!-- 1. API Parameters -->
       <div class="cheat-card" style="grid-column: 1 / -1;">
         <h3>${Icons.fileText} Messages API (/v1/messages) 主要パラメータ仕様</h3>
