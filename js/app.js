@@ -2026,7 +2026,7 @@ function renderCheatsheetView(container) {
     <div class="view-hero">
       <span class="view-hero-badge">Quick Reference</span>
       <h2>Claude認定 必須チートシート & 早見表</h2>
-      <p>試験直前の最終確認用。Messages APIパラメータ、Prompt Caching境界値、エージェント5大パターン、MCPプリミティブ、ASL安全レベルを網羅。</p>
+      <p>試験直前の最終確認用。Messages APIパラメータ、Prompt Caching境界値、エージェントパターン、MCPプリミティブ、ASL安全レベルを網羅。</p>
     </div>
 
     <div class="cheatsheet-grid">
@@ -2039,10 +2039,10 @@ function renderCheatsheetView(container) {
                 🔥 CCAR-F / CCAR-P / CCDV-F 直前必読
               </span>
               <h2 style="font-size: 21px; font-weight: 800; color: var(--text-primary); margin: 0 0 6px 0; display: flex; align-items: center; gap: 8px;">
-                ${Icons.compass} Anthropic公式「アーキテクチャ判断ツリー＆決定基準」
+                ${Icons.compass} 公式資料ベースの「アーキテクチャ判断ツリー＆決定基準」
               </h2>
               <p style="font-size: 13.5px; color: var(--text-secondary); margin: 0; line-height: 1.6;">
-                公式ガイド『Building Effective Agents』やClaude Code固有ドクトリンに基づく決定基準。微妙な選択肢の迷いを断ち切る7大ツリー。
+                『Building effective agents』、Claude Code / Claude API ドキュメント、CCAR-F 試験目標の文言をもとに整理した判断基準です。「本教材の整理」と書いた項目は公式用語ではない点に注意。
               </p>
             </div>
           </div>
@@ -2158,7 +2158,7 @@ function renderCheatsheetView(container) {
                 </div>
               </div>
               <div class="dt-principle-box">
-                <strong>💡 Anthropic公式の鉄則:</strong> ${tree.principle}
+                <strong>💡 ポイント:</strong> ${tree.principle}
               </div>
               ${bodyHtml}
             </div>
@@ -2225,7 +2225,7 @@ function renderCheatsheetView(container) {
             </tbody>
           </table>
           <p style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">
-            トランスポート: ローカル子プロセスは <code>stdio</code>、リモート通信は <code>SSE over HTTP</code>。
+            トランスポート: ローカル子プロセスは <code>stdio</code>、リモート通信は <code>Streamable HTTP</code>（旧来の HTTP+SSE 方式は非推奨）。
           </p>
         </div>
       </div>

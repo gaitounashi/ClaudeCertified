@@ -3,7 +3,7 @@
  */
 const CHEATSHEET_DATA = {
   apiParams: [
-    { name: "model", type: "string", required: "必須", desc: "使用するモデル識別子（例: claude-3-5-sonnet-20241022, claude-3-5-haiku-20241022）" },
+    { name: "model", type: "string", required: "必須", desc: "使用するモデル識別子（例: claude-sonnet-4-5, claude-haiku-4-5 などのエイリアス、または日付付きのスナップショットID）" },
     { name: "max_tokens", type: "integer", required: "必須", desc: "生成される応答の最大トークン長。Claude APIでは省略不可（必須）。" },
     { name: "messages", type: "array", required: "必須", desc: "会話配列。userとassistantが交互に並ぶ必要がある。systemロールはここには含めない。" },
     { name: "system", type: "string / array", required: "任意", desc: "トップレベルで渡すシステムプロンプト。配列にしてcache_controlを付与可能。" },
@@ -15,10 +15,10 @@ const CHEATSHEET_DATA = {
   ],
 
   promptCaching: [
-    { item: "最小キャッシュトークン", sonnetOpus: "1,024 トークン", haiku: "2,048 トークン", note: "境界値未満の場合はキャッシュされない（超重要）" },
-    { item: "キャッシュ有効期限 (TTL)", sonnetOpus: "5分間", haiku: "5分間", note: "参照されるたびにTTLは自動で5分延長" },
+    { item: "最小キャッシュトークン", sonnetOpus: "モデルにより異なる（Sonnet系 1,024 / Opus 4.5 は 4,096）", haiku: "モデルにより異なる（Haiku 3/3.5 は 2,048 / Haiku 4.5 は 4,096）", note: "境界値未満はキャッシュされない。数値は世代で変わるので最新ドキュメントで確認" },
+    { item: "キャッシュ有効期限 (TTL)", sonnetOpus: "5分（既定）/ 1時間（オプション）", haiku: "5分（既定）/ 1時間（オプション）", note: "キャッシュヒットのたびにTTLはリセット" },
     { item: "最大ブレークポイント数", sonnetOpus: "4箇所まで", haiku: "4箇所まで", note: "cache_control: {\"type\": \"ephemeral\"}" },
-    { item: "キャッシュヒット時のコスト", sonnetOpus: "通常入力の10% (90%オフ)", haiku: "通常入力の10% (90%オフ)", note: "キャッシュ作成時は通常入力の125%" },
+    { item: "キャッシュヒット時のコスト", sonnetOpus: "通常入力の10% (90%オフ)", haiku: "通常入力の10% (90%オフ)", note: "キャッシュ書き込みは通常入力の125%（5分）/ 200%（1時間）" },
     { item: "レイテンシ削減率", sonnetOpus: "最大 85% 短縮", haiku: "最大 85% 短縮", note: "大規模コンテキストで劇的効果" },
     { item: "キャッシュキーの性質", sonnetOpus: "完全一致プレフィックス", haiku: "完全一致プレフィックス", note: "先頭に動的タイムスタンプを入れると100%ミスヒット" }
   ],
@@ -69,10 +69,10 @@ const CHEATSHEET_DATA = {
   ],
 
   aslLevels: [
-    { level: "ASL-1", risk: "壊滅的リスクなし", definition: "標準的なLLM以前のシステムや単純な分類タスク。" },
-    { level: "ASL-2", risk: "初歩的危険（現状の主要モデル）", definition: "危険な知識はあるが、通常のWeb検索で得られる情報を超えないレベル。" },
-    { level: "ASL-3", risk: "生物兵器・自律サイバー攻撃リスク", definition: "重大なサイバー攻撃の自律実行や生物兵器製造の具体的危険支援が可能。二重暗号化・隔離環境運用が義務化。" },
-    { level: "ASL-4", risk: "国家安全保障の重大脅威", definition: "未到達の極限レベル。完全な自律拡散や壊滅的脅威。厳格な国際規制対象。" }
+    { level: "ASL-1", risk: "壊滅的リスクが実質的にない", definition: "例: チェス専用AIのような、壊滅的リスクに意味のある寄与をしないシステム。" },
+    { level: "ASL-2", risk: "危険な能力の初期兆候", definition: "危険な情報を出せても、検索エンジンや教科書で得られる以上の実質的な上積みがない段階。標準的なセキュリティ・デプロイ基準。" },
+    { level: "ASL-3", risk: "壊滅的悪用リスクが大きく高まる", definition: "CBRN兵器などへの意味のある支援が懸念される段階。強化されたセキュリティ（重みの窃取対策）とデプロイ時の誤用防止策が必要。2025年5月に Claude Opus 4 で予防的に適用開始。" },
+    { level: "ASL-4以上", risk: "さらに高度な能力", definition: "より厳格な基準を今後定義予定（RSPは改訂され続けるため最新版を確認）。" }
   ],
 
   examComparison: [
@@ -92,10 +92,10 @@ const CHEATSHEET_DATA = {
   ],
 
   trapList: [
-    { title: "罠1: むやみに自律エージェントを作る", desc: "Anthropicの公式ベストプラクティスでは、決定論的なコードで制御できる「ワークフロー」を最優先すべきと明記されています。" },
+    { title: "罠1: いきなり自律エージェントを作る", desc: "「Building effective agents」では、まず最もシンプルな解（単一のLLM呼び出し）から始め、必要なときだけワークフロー → エージェントと複雑さを足すよう勧めています。" },
     { title: "罠2: 長文プロンプトで指示を先頭に書く", desc: "巨大資料を投入する際は、資料を前に置き、指示と質問を「最も末尾」に置くのが公式の最高精度ルールです。" },
     { title: "罠3: キャッシュの先頭に動的日時を入れる", desc: "プレフィックスの1文字でも変わるとPrompt Cachingは無効になります。静的マニュアルを先頭に置きましょう。" },
-    { title: "罠4: Haikuの最小キャッシュ長を1,024と覚える", desc: "Sonnet/Opusは1,024トークンですが、Haikuは2,048トークンです。試験で極めてよく出る引っかけです。" },
+    { title: "罠4: 最小キャッシュ長を1つの数字で覚える", desc: "最小キャッシュ長はモデルごとに違います（Sonnet系 1,024、旧Haiku 2,048、Haiku 4.5 / Opus 4.5 は 4,096 など）。「短すぎるとキャッシュされない」という仕組みと、モデル依存であることを押さえましょう。" },
     { title: "罠5: ベクトル検索（Dense）だけで型番を検索する", desc: "型番やエラーコードの完全一致にはBM25（Sparse）が必要です。ハイブリッド検索＋Re-rankingを選びましょう。" },
     { title: "罠6: LLM-as-a-Judgeで1回だけ評価する", desc: "位置バイアス（Position Bias）があるため、必ずOption A/Bを入れ替えたSwap Evaluationで2回評価します。" },
     { title: "罠7: ZDR契約だから自社もログを捨ててしまう", desc: "ベンダー側が保存しないため、自社の説明責任を果たすための監査ログは自社KMS暗号化ストレージに保管必須です。" },
@@ -115,7 +115,7 @@ const CHEATSHEET_DATA = {
 2. 選択肢はA〜Dの4択とし、もっともらしい誤答（引っかけのアンチパターン）を含めること。
 3. 特に以下の出題観点を重点的に網羅すること：
    - ワークフロー vs 自律エージェントの選定境界
-   - Prompt Cachingの配置と最小トークン要件（Sonnet 1024 / Haiku 2048）
+   - Prompt Cachingの配置と最小トークン要件（モデルごとに異なる）
    - 長文コンテキスト配置（資料は前、指示・質問は末尾）
    - Contextual RetrievalとBM25ハイブリッド検索（RRF）
    - レートリミット（429）への指数バックオフ＋Jitter
@@ -131,30 +131,31 @@ const CHEATSHEET_DATA = {
     {
       id: "agent-architecture",
       title: "1. ワークフロー vs 自律エージェントの選定ツリー",
-      subtitle: "Anthropic基本原則: 「常に最もシンプルな決定論的ワークフローから始めよ」",
-      principle: "複雑な自律エージェントは予測不能性とコスト・レイテンシを増加させます。固定ステップで解けるなら決定論的コードで制御するワークフローを最優先します。",
+      subtitle: "出典: Anthropic「Building effective agents」— 最もシンプルな解から始め、必要なときだけ複雑さを足す",
+      principle: "記事では「ワークフロー＝事前に定義したコード経路でLLMとツールを動かす」「エージェント＝LLMが自分で手順とツール利用を動的に決める」と区別しています。下の5パターンはすべて『ワークフロー』側で、Orchestrator-Workers と Evaluator-Optimizer もワークフローに分類されます（よくある誤解）。",
       flow: [
         {
-          step: "Q1. タスクの実行手順や入力から出力へのフローは事前に予測・定義可能か？",
+          step: "Q1. 単一のLLM呼び出し（＋検索・few-shot）で足りるか？ → 足りるならそれで終わり。足りない場合、手順は事前にコードで定義できるか？",
           branches: [
             {
-              answer: "YES ➜ 【決定論的ワークフロー (Workflows)】を選択",
-              tag: "Deterministic",
+              answer: "YES ➜ 【ワークフロー (Workflows)】",
+              tag: "Predefined paths",
               badgeColor: "var(--info)",
               subConditions: [
-                { cond: "ステップ間に固定の逐次依存関係がある", result: "Prompt Chaining（連鎖）", desc: "前の出力が次の入力になる直列パイプライン。" },
-                { cond: "入力タイプや意図によって処理を振り分ける", result: "Routing（ルーティング）", desc: "軽量モデル（Haiku）で分類し、専門プロンプト/モデルへ分岐。" },
-                { cond: "独立した複数サブタスクを同時実行してレイテンシ短縮", result: "Parallelization (Sectioning)", desc: "複数ファイル・複数章の並列処理（単一ターン内並列ツール呼び出し）。" },
-                { cond: "精度・安全性の向上のため同一タスクを多角的に検証", result: "Parallelization (Voting)", desc: "複数視点・モデルで並列実行し、多数決や合意形成を行う。" }
+                { cond: "固定の順序で分解でき、途中にプログラムによるチェック（ゲート）を挟みたい", result: "Prompt Chaining", desc: "前の出力が次の入力になる。レイテンシと引き換えに各ステップの精度を上げる。" },
+                { cond: "入力の種類で処理を分けたい", result: "Routing", desc: "分類して専門のプロンプト・モデルに振り分ける（易しい問い合わせは小さいモデルへ、など）。" },
+                { cond: "独立したサブタスクを同時に処理したい", result: "Parallelization (Sectioning)", desc: "分割して並列実行し、結果をまとめる。関心事ごとに分けると各観点の精度も上がる。" },
+                { cond: "同じタスクを複数回実行して信頼度を上げたい", result: "Parallelization (Voting)", desc: "複数の視点・試行で多数決や閾値判定をする。" },
+                { cond: "必要なサブタスクが入力次第で、事前に決められない", result: "Orchestrator-Workers", desc: "中央のLLMが動的にタスクを分解してワーカーへ委任し、結果を統合する。並列化との違いは『分割が事前に決まっていない』こと。" },
+                { cond: "明確な評価基準があり、フィードバックで改善が見込める", result: "Evaluator-Optimizer", desc: "生成役が出力し、評価役が具体的にフィードバックするループ。" }
               ]
             },
             {
-              answer: "NO ➜ 【自律エージェント (Autonomous Agents)】を選択",
-              tag: "Autonomous",
+              answer: "NO ➜ 【エージェント (Agents)】",
+              tag: "Model-driven",
               badgeColor: "var(--accent-primary)",
               subConditions: [
-                { cond: "タスクのサブステップが事前に予測できず、動的に分解・委任する必要がある", result: "Orchestrator-Workers（司令塔）", desc: "中央のOrchestratorが動的に計画を立て、Workerを並行実行して結果を集約。" },
-                { cond: "明確な定量的評価基準（テスト、リント、スキーマ）があり、出力を反復洗練する", result: "Evaluator-Optimizer（評価ループ）", desc: "Generatorが出力し、Evaluatorが具体的な失敗と入出力例をフィードバックして改善。" }
+                { cond: "必要なステップ数が予測できない、手順をハードコードできないオープンエンドな問題", result: "エージェント（ツールを使うLLMのループ）", desc: "環境（ツール結果・テスト結果など）からのフィードバックを見ながら自律的に進める。コストと誤りが積み重なるリスクがあるため、サンドボックスでの十分なテストとガードレール・停止条件（最大ターン数など）が前提。" }
               ]
             }
           ]
@@ -164,7 +165,7 @@ const CHEATSHEET_DATA = {
     {
       id: "review-execution",
       title: "2. レビュー＆実行アーキテクチャの選択ツリー（人手承認の要否）",
-      subtitle: "タスクの「リスク（破壊性）」と「承認要件」で3つのモードを厳密に使い分ける",
+      subtitle: "※本教材の整理です（Plan Mode は Claude Code の公式機能ですが、この3分類は公式用語ではありません）。スコープ・リスク・承認要件で判断する軸を覚えましょう",
       principle: "破壊的変更や多段階の依存がある処理に直接実行を適用するのは厳禁。事前の計画承認またはフェーズ単位の承認ゲートを設けます。",
       modes: [
         {
@@ -199,38 +200,44 @@ const CHEATSHEET_DATA = {
     {
       id: "claude-code-config",
       title: "3. Claude Code 構成メカニズム選定マトリクス",
-      subtitle: "「何を」「どこに」「どのスコープで」設定すべきかの公式ガイドライン",
-      principle: "グローバルに書きすぎるとコンテキストを浪費し、特定ツールに寄りすぎると汎用性を失います。スコープの原則を守ります。",
+      subtitle: "「何を」「どこに」「どのスコープで」設定するか（Claude Code ドキュメント: Memory / Settings / Hooks / Skills / Headless）",
+      principle: "常時必要なものだけを CLAUDE.md に置き、条件付きのものは rules・Skills へ逃がします。『必ず守らせたい』ものはプロンプトではなく Hooks や permissions で仕組みとして強制します。",
       mechanisms: [
         {
           target: "CLAUDE.md",
-          scope: "リポジトリ全体 / チーム共有",
-          when: "プロジェクト全体の規約、ビルド・テストの実行コマンド、普遍的なコーディングスタイルガイド。",
-          timing: "セッション開始時に全コンテキストへ永続ロード。"
+          scope: "リポジトリ全体 / チーム共有（~/.claude/CLAUDE.md はユーザー全体）",
+          when: "プロジェクト全体の規約、ビルド・テストの実行コマンド、全体アーキテクチャ概要。簡潔に保つ。",
+          timing: "セッション開始時にロード。"
         },
         {
-          target: ".claude/rules/*.md (globパターン)",
+          target: ".claude/rules/*.md（frontmatter の paths: に glob）",
           scope: "特定ディレクトリ・拡張子限定",
-          when: "特定のファイル群（例: src/api/** のみ適用するAPI規約、*.test.ts にのみ適用するモック規約）。",
-          timing: "該当するファイルが参照・編集される時に自動ロード。"
+          when: "特定のファイル群だけに効かせたい規約（例: paths: [\"src/api/**/*.ts\"]）。paths なしのルールは常時ロード。",
+          timing: "paths 指定ありは、該当ファイルを扱うときにロード。"
         },
         {
-          target: "Skills (スラッシュコマンド)",
+          target: "Skills（.claude/skills/<名前>/SKILL.md）",
           scope: "オンデマンド定型タスク",
-          when: "特定のリサーチやデプロイなど、必要な時だけ呼び出す手順。context: fork を指定するとサブエージェントで分離実行され、メインのセッション状態を汚染しない。",
-          timing: "ユーザーまたはエージェントがコマンドを実行した時のみ。"
+          when: "リリース手順やレビュー手順など、必要なときだけ使う手順書。frontmatter の context: fork でサブエージェントとして分離実行、allowed-tools で使えるツールを限定できる。",
+          timing: "スラッシュコマンドでの呼び出し時、またはタスク内容が description に合致したとき。"
         },
         {
-          target: "Hooks (フック)",
-          scope: "自動ガードレール / 強制検証",
-          when: "ツール実行前後に強制するLinter、型チェック、セキュリティスキャナー、Pre-commitフック。",
-          timing: "特定のツール（Edit, Write, Bash等）の実行前後。"
+          target: "Hooks（settings.json の hooks）",
+          scope: "決定論的な自動処理・ガードレール",
+          when: "必ず実行したい整形（PostToolUse で prettier）や、条件付きの遮断（PreToolUse で検証スクリプト → 終了コード2でブロック）。",
+          timing: "PreToolUse / PostToolUse / Stop などのイベント発生時。"
         },
         {
-          target: "CI/CD 非対話フラグ",
+          target: "permissions（settings.json の allow / deny）",
+          scope: "静的なアクセス制御",
+          when: "Read(./.env.production) や Bash(rm -rf:*) のような、条件なしで常に禁止・許可したい操作。",
+          timing: "ツール実行の許可判定時。"
+        },
+        {
+          target: "CI/CD（headless）",
           scope: "自動化パイプライン",
-          when: "人手介入のないCI/CD環境でのClaude Code CLI呼び出し。-p（非対話モード）、--dangerously-skip-permissions、暴走防止のコスト・ターン制限。",
-          timing: "GitHub ActionsやJenkins等の自動ジョブ。"
+          when: "-p（非対話）、--output-format json、--allowedTools で必要なツールだけ許可（例: \"Read,Grep,Glob\" や \"Bash(npm test)\"）、--max-turns / --max-budget-usd で暴走防止。--dangerously-skip-permissions（bypassPermissions）は全チェックを無効化するため、隔離されたサンドボックス以外では避けるのが原則。",
+          timing: "GitHub Actions などの自動ジョブ。"
         }
       ]
     },
