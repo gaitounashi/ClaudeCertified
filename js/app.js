@@ -345,6 +345,9 @@ function renderApp() {
     case 'ccarf-revenge':
       renderCcarfRevengeView(container);
       break;
+    case 'reading-list':
+      renderReadingListView(container);
+      break;
     case 'ccdv-special':
       renderCcdvSpecialView(container);
       break;
@@ -2392,6 +2395,103 @@ function fallbackCopy(text, btn) {
     alert('コピーに失敗しました。手動でテキストを選択してコピーしてください。');
   }
   document.body.removeChild(textarea);
+}
+
+// ==========================================
+// 6B. PRIMARY SOURCE READING LIST VIEW
+// ==========================================
+function renderReadingListView(container) {
+  const data = typeof READING_LIST_DATA !== 'undefined' ? READING_LIST_DATA : { cards: [] };
+  const cards = data.cards || [];
+
+  let html = `
+    <div class="view-hero">
+      <span class="view-hero-badge">Primary Sources (${escapeHtml(data.updated || '')})</span>
+      <h2>📖 CCAR-F 一次情報リーディングガイド</h2>
+      <p>スコアレポートで100%未満だった試験目標と、それに対応するAnthropic公式ドキュメント・Engineering記事の該当箇所、押さえるべき要点、読了後の自己確認問題をまとめました。公式資料の記述と、試験目標の文言から導いた「答え筋」は明確に区別しています。</p>
+    </div>
+
+    <div class="dt-hero" style="margin-bottom: 20px;">
+      <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;">
+        <strong>テーマ別ジャンプ（全${cards.length}テーマ）:</strong>
+      </div>
+      <div class="dt-nav-pills">
+        ${cards.map((c, idx) => `
+          <button class="dt-pill-btn" onclick="document.getElementById('rl-${c.id}').scrollIntoView({behavior: 'smooth'})">
+            <span>${idx + 1}.</span> ${escapeHtml(c.title)}
+          </button>
+        `).join('')}
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+      ${cards.map((c, idx) => `
+        <div class="dt-card" id="rl-${c.id}">
+          <div class="dt-card-header">
+            <div>
+              <h3 class="dt-card-title">${idx + 1}. ${escapeHtml(c.title)}</h3>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 14px;">
+            <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px;">対象となる試験目標（前回スコアレポート）</div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              ${c.objectives.map(o => {
+                const badgeColor = o.score === 0 ? 'var(--danger)' : 'var(--warning)';
+                return `
+                  <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; background: var(--bg-secondary); padding: 8px 12px; border-radius: var(--radius-sm); border-left: 3px solid ${badgeColor};">
+                    <span class="badge" style="background: ${badgeColor}22; color: ${badgeColor}; font-weight: 700; flex-shrink: 0;">${o.score}%</span>
+                    <span style="color: var(--text-primary);">${escapeHtml(o.text)}</span>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+
+          <div style="margin-bottom: 14px;">
+            <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px;">読むべき一次情報</div>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              ${c.sources.map(s => `
+                <div style="background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 10px 12px;">
+                  <div style="font-size: 13.5px; font-weight: 700;">
+                    <a href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer" style="color: var(--accent-primary); text-decoration: underline;">
+                      ${escapeHtml(s.title)} ↗
+                    </a>
+                  </div>
+                  <div style="font-size: 12px; color: var(--text-secondary); margin-top: 3px;">
+                    注目箇所: ${escapeHtml(s.focus)}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <div style="margin-bottom: 14px;">
+            <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px;">要点（公式資料の記述 / 試験目標からの答え筋）</div>
+            <ul style="margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--text-primary); line-height: 1.6;">
+              ${c.keyPoints.map(kp => `<li>${escapeHtml(kp)}</li>`).join('')}
+            </ul>
+          </div>
+
+          <div>
+            <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px;">読んだら答えられるべき確認問題（クリックで解答表示）</div>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              ${c.checks.map(chk => `
+                <details style="background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 10px 12px; cursor: pointer;">
+                  <summary style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Q. ${escapeHtml(chk.q)}</summary>
+                  <div style="font-size: 13px; color: var(--success); margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border-subtle); line-height: 1.55;">
+                    <strong>A.</strong> ${escapeHtml(chk.a)}
+                  </div>
+                </details>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+
+  container.innerHTML = html;
 }
 
 // ==========================================
