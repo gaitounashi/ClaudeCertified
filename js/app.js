@@ -189,6 +189,8 @@ function renderResetModalContent() {
 
   const exams = [
     { code: 'CCAR-F-REV', title: '🔥 CCAR-F スコアレポート弱点特訓 (全36問)', desc: '690→720+点突破 / 0%の8目標＋50〜80%の10目標ピンポイント対策' },
+    { code: 'CCDV-P', title: '🆕 CCDV-P (Developer Professional・全70問)', desc: '2026年11月新設 / 本番運用・信頼性・オブザーバビリティ・評価・ガードレール・フリート運用' },
+    { code: 'CCDV-P-SAMPLE', title: '📘 CCDV-P 試験ガイド公式サンプル (全3問)', desc: '試験ガイド v1.0 セクション7 掲載の公式例題3問' },
     { code: 'CCAR-F', title: 'CCAR-F (Architect Foundations)', desc: '公式6大シナリオ / Prerequisite Gate / Agent SDK' },
     { code: 'CCAR-P', title: 'CCAR-P (Architect Professional)', desc: '公式4大シナリオ / 金融マルチクラウド / 医療AI規制 / MLOps / FinOps' },
     { code: 'preporato', title: '🎯 Preporato厳選 CCA-Fシナリオ (全20問)', desc: 'エージェント / ツール・MCP / Claude Code / プロンプト / コンテキスト' },
@@ -246,6 +248,8 @@ function renderResetModalContent() {
 function resetExamProgress(examCode) {
   const examTitles = {
     'CCAR-F-REV': '🔥 CCAR-F スコアレポート弱点特訓 (全36問)',
+    'CCDV-P': '🆕 CCDV-P (Developer Professional・全70問)',
+    'CCDV-P-SAMPLE': '📘 CCDV-P 試験ガイド公式サンプル (全3問)',
     'CCDV-F': 'CCDV-F (Developer Foundations)',
     'CCAO-F': 'CCAO-F (Associate Foundations)',
     'CCAR-F': 'CCAR-F (Architect Foundations)',
@@ -347,6 +351,9 @@ function renderApp() {
       break;
     case 'reading-list':
       renderReadingListView(container);
+      break;
+    case 'ccdvp-special':
+      renderCcdvpSpecialView(container);
       break;
     case 'ccdv-special':
       renderCcdvSpecialView(container);
@@ -613,6 +620,172 @@ function goToCcdvPractice() {
 function goToCcdvMock() {
   switchTab('mock');
   startMockExam('CCDV-F');
+}
+
+// ==========================================================================
+// CCDV-P DEDICATED VIEW (Developer Professional Special Guide - Nov 2026)
+// ==========================================================================
+function renderCcdvpSpecialView(container) {
+  const book = TEXTBOOKS_DATA.ccdv_p;
+  if (!book) {
+    container.innerHTML = '<p>CCDV-P 教本データが見つかりません。</p>';
+    return;
+  }
+  const totalChapters = book.sections.length;
+  const readCount = book.sections.filter(sec => AppState.readChapters.has(sec.id)).length;
+  const readPercent = Math.round((readCount / totalChapters) * 100);
+
+  const ccdvpQuestions = QUESTIONS_DATA.filter(q => q.exam === 'CCDV-P');
+  const answeredCCDV_P = ccdvpQuestions.filter(q => AppState.userAnswers[q.id]);
+  const correctCCDV_P = answeredCCDV_P.filter(q => AppState.userAnswers[q.id].isCorrect);
+  const ccdvpAccuracy = answeredCCDV_P.length > 0 ? Math.round((correctCCDV_P.length / answeredCCDV_P.length) * 100) : 0;
+
+  const sampleQuestions = QUESTIONS_DATA.filter(q => q.exam === 'CCDV-P-SAMPLE');
+  const answeredSamples = sampleQuestions.filter(q => AppState.userAnswers[q.id]);
+
+  let html = `
+    <div class="ccdv-hero-banner" style="background: linear-gradient(135deg, rgba(14, 165, 233, 0.14), rgba(15, 23, 42, 0.5)); border-color: rgba(56, 189, 248, 0.4);">
+      <div class="ccdv-badge-row">
+        <span class="badge-dev-tag" style="background: #0284c7; color: #fff;">Developer Professional (CCDV-P)</span>
+        <span class="badge-priority-tag" style="background: rgba(56, 189, 248, 0.18); color: #38bdf8;">🆕 試験ガイド v1.0（2026年11月発効）準拠</span>
+        <span style="font-size: 11px; color: var(--text-muted); margin-left: auto;">8分野ブループリント対応</span>
+      </div>
+
+      <h2 style="font-size: 24px; font-weight: 800; color: var(--text-primary); margin-bottom: 8px;">
+        CCDV-P 特化教本 & 模擬問題・公式サンプル
+      </h2>
+      <p style="font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 16px;">
+        「Claude Certified Developer – Professional」の試験ガイド（v1.0 / 2026年11月）に基づく読み物（全8章）と、公式サンプル3問＋分野配点準拠の模擬問題70問です。
+        Foundations が「構築」を問うのに対し、Professional は<strong>稼働中の本番システムの運用責任（SLO、停止理由別フォールバック、分散トレース、LLM-as-judge のキャリブレーション、決定論的ガードレール、コーディングエージェントフリート運用）</strong>を問います。<br>
+        <span style="font-size: 12px; color: var(--text-muted);">※模擬問題はガイドの目標文言と公式ドキュメントから作成した練習用であり、本番の出題を再現したものではありません。</span>
+      </p>
+
+      <div class="ccdv-stats-grid">
+        <div class="ccdv-stat-card">
+          <div class="label">本番問題数</div>
+          <div class="value" style="color: #38bdf8;">70問 (採点60+非採点10)</div>
+        </div>
+        <div class="ccdv-stat-card">
+          <div class="label">制限時間 / 受験料</div>
+          <div class="value">120分 / $175</div>
+        </div>
+        <div class="ccdv-stat-card">
+          <div class="label">合格ライン</div>
+          <div class="value" style="color: var(--success);">720 / 1000点</div>
+        </div>
+        <div class="ccdv-stat-card">
+          <div class="label">公式サンプル例題</div>
+          <div class="value" style="color: #ecc94b;">${answeredSamples.length} / ${sampleQuestions.length}問</div>
+        </div>
+        <div class="ccdv-stat-card">
+          <div class="label">教本読了進捗</div>
+          <div class="value" style="color: #38bdf8;">${readCount} / ${totalChapters} 章 (${readPercent}%)</div>
+        </div>
+        <div class="ccdv-stat-card">
+          <div class="label">模擬問題70問 習熟度</div>
+          <div class="value" style="color: var(--accent-primary);">${answeredCCDV_P.length} / ${ccdvpQuestions.length}問 (${ccdvpAccuracy}%)</div>
+        </div>
+      </div>
+
+      <div class="ccdv-quick-actions">
+        <button class="btn-ccdv-action primary" onclick="goToCcdvpPractice()">
+          ${Icons.helpCircle} CCDV-P 模擬問題集 (${ccdvpQuestions.length}問) を解く
+        </button>
+        <button class="btn-ccdv-action secondary" onclick="goToCcdvpSamples()">
+          ${Icons.award} 公式ガイド サンプル問題 (${sampleQuestions.length}問) を解く
+        </button>
+        <button class="btn-ccdv-action secondary" onclick="goToCcdvpMock()">
+          ${Icons.clock} CCDV-P 本番模擬試験 (70問 / 120分) を開始
+        </button>
+        ${answeredCCDV_P.length > 0 ? `
+          <button class="btn-reset-exam" style="padding: 8px 16px; border-radius: var(--radius-md);" onclick="resetExamProgress('CCDV-P')">
+            ${Icons.refresh} CCDV-P 解答リセット (${answeredCCDV_P.length}問済)
+          </button>
+        ` : ''}
+      </div>
+    </div>
+
+    <div class="textbook-layout">
+      <aside class="textbook-toc">
+        <h3>CCDV-P カリキュラム (全8章)</h3>
+        <ul class="toc-list">
+          ${book.sections.map((sec, idx) => {
+            const isRead = AppState.readChapters.has(sec.id);
+            return `
+              <li>
+                <a href="#${sec.id}" class="toc-link ${idx === 0 ? 'active' : ''}" onclick="smoothScrollTo(event, '${sec.id}')">
+                  <span style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                    <span>${sec.title.split('：')[0]}</span>
+                    <span style="font-size: 11px; font-weight: 700; color: ${isRead ? 'var(--success)' : 'var(--text-muted)'};">
+                      ${isRead ? '✓ 読了' : '未'}
+                    </span>
+                  </span>
+                </a>
+              </li>
+            `;
+          }).join('')}
+        </ul>
+      </aside>
+
+      <main class="textbook-body">
+        ${book.sections.map((sec) => {
+          const isRead = AppState.readChapters.has(sec.id);
+          return `
+            <article id="${sec.id}" class="textbook-chapter-card">
+              <div class="chapter-meta-bar">
+                <div>
+                  <span class="chapter-weight-pill">${sec.weight || '重要度: ★★★'}</span>
+                  ${(sec.keyTopics || []).map(t => `<span style="font-size: 11px; margin-left: 6px; padding: 2px 7px; border-radius: var(--radius-full); background: var(--bg-tertiary); color: var(--text-muted); border: 1px solid var(--border-subtle);">${t}</span>`).join('')}
+                </div>
+                <button class="read-toggle-btn ${isRead ? 'completed' : ''}" onclick="toggleChapterRead('${sec.id}')">
+                  ${isRead ? '✓ 読了済み (完了)' : '◯ 読了済みにする'}
+                </button>
+              </div>
+
+              <div class="chapter-title-group" style="margin-bottom: 16px;">
+                <h2 style="font-size: 20px; font-weight: 700; color: var(--text-primary);">${sec.title}</h2>
+              </div>
+
+              <div class="markdown-content">
+                ${renderMarkdown(sec.content)}
+              </div>
+
+              <div style="margin-top: 24px; padding-top: 14px; border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <button class="read-toggle-btn ${isRead ? 'completed' : ''}" onclick="toggleChapterRead('${sec.id}')">
+                  ${isRead ? '✓ 読了済み' : '◯ 読了済みにする'}
+                </button>
+                <div style="display: flex; gap: 8px;">
+                  <button class="btn-secondary" style="font-size: 12.5px; padding: 6px 14px;" onclick="goToCcdvpSamples()">
+                    ${Icons.award} 公式サンプル3問を見る
+                  </button>
+                  <button class="btn-secondary" style="font-size: 12.5px; padding: 6px 14px;" onclick="goToCcdvpPractice()">
+                    ${Icons.helpCircle} CCDV-P 問題集 (70問) を解く
+                  </button>
+                </div>
+              </div>
+            </article>
+          `;
+        }).join('')}
+      </main>
+    </div>
+  `;
+
+  container.innerHTML = html;
+}
+
+function goToCcdvpPractice() {
+  AppState.practiceFilters.exam = 'CCDV-P';
+  switchTab('practice');
+}
+
+function goToCcdvpSamples() {
+  AppState.practiceFilters.exam = 'CCDV-P-SAMPLE';
+  switchTab('practice');
+}
+
+function goToCcdvpMock() {
+  switchTab('mock');
+  startMockExam('CCDV-P');
 }
 
 // ==========================================================================
@@ -1088,7 +1261,8 @@ function renderTextbookView(container) {
   const examKeys = [
     { key: 'roadmap', label: '攻略ロードマップ', code: 'ALL' },
     { key: 'ccao', label: 'CCAO-F (Associate)', code: 'CCAO-F' },
-    { key: 'ccdv', label: 'CCDV-F (Developer)', code: 'CCDV-F' },
+    { key: 'ccdv', label: 'CCDV-F (Developer-F)', code: 'CCDV-F' },
+    { key: 'ccdv_p', label: '🆕 CCDV-P (Developer-P)', code: 'CCDV-P' },
     { key: 'ccar_f', label: 'CCAR-F (Architect-F)', code: 'CCAR-F ★最難関' },
     { key: 'ccar_p', label: 'CCAR-P (Architect-P)', code: 'CCAR-P ★4大シナリオ' }
   ];
@@ -1104,8 +1278,11 @@ function renderTextbookView(container) {
 
     <!-- Exam Selector Pills -->
     <div class="exam-selector-pills">
+      <button class="exam-pill" style="border-color: #38bdf8; color: #38bdf8; font-weight: 700;" onclick="switchTab('ccdvp-special')">
+        🆕 CCDV-P 特化教本 (2026.11新設)
+      </button>
       <button class="exam-pill" style="border-color: var(--accent-primary); color: var(--accent-primary); font-weight: 700;" onclick="switchTab('ccdv-special')">
-        🚀 CCDV-F 特化教本 (最優先)
+        🚀 CCDV-F 特化教本
       </button>
       ${examKeys.map(k => `
         <button class="exam-pill ${AppState.textbookExam === k.key ? 'active' : ''}" onclick="switchTextbookExam('${k.key}')">
@@ -1174,6 +1351,8 @@ function renderPracticeView(container) {
   const minorunCount = QUESTIONS_DATA.filter(q => q.specialTag === 'みのるん式特訓').length;
   const countCCAO = QUESTIONS_DATA.filter(q => q.exam === 'CCAO-F').length;
   const countCCDV = QUESTIONS_DATA.filter(q => q.exam === 'CCDV-F').length;
+  const countCCDVP = QUESTIONS_DATA.filter(q => q.exam === 'CCDV-P').length;
+  const countCCDVPSample = QUESTIONS_DATA.filter(q => q.exam === 'CCDV-P-SAMPLE').length;
   const countCCAR = QUESTIONS_DATA.filter(q => q.exam === 'CCAR-F').length;
   const countCCARP = QUESTIONS_DATA.filter(q => q.exam === 'CCAR-P').length;
   const countPrep = QUESTIONS_DATA.filter(q => q.specialTag === 'Preporato厳選').length;
@@ -1182,6 +1361,8 @@ function renderPracticeView(container) {
   const answeredMinorun = QUESTIONS_DATA.filter(q => q.specialTag === 'みのるん式特訓' && AppState.userAnswers[q.id]).length;
   const answeredCCAO = QUESTIONS_DATA.filter(q => q.exam === 'CCAO-F' && AppState.userAnswers[q.id]).length;
   const answeredCCDV = QUESTIONS_DATA.filter(q => q.exam === 'CCDV-F' && AppState.userAnswers[q.id]).length;
+  const answeredCCDVP = QUESTIONS_DATA.filter(q => q.exam === 'CCDV-P' && AppState.userAnswers[q.id]).length;
+  const answeredCCDVPSample = QUESTIONS_DATA.filter(q => q.exam === 'CCDV-P-SAMPLE' && AppState.userAnswers[q.id]).length;
   const answeredCCAR = QUESTIONS_DATA.filter(q => q.exam === 'CCAR-F' && AppState.userAnswers[q.id]).length;
   const answeredCCARP = QUESTIONS_DATA.filter(q => q.exam === 'CCAR-P' && AppState.userAnswers[q.id]).length;
   const answeredPrep = QUESTIONS_DATA.filter(q => q.specialTag === 'Preporato厳選' && AppState.userAnswers[q.id]).length;
@@ -1232,6 +1413,8 @@ function renderPracticeView(container) {
     <div class="exam-selector-pills">
       <button class="exam-pill ${AppState.practiceFilters.exam === 'all' ? 'active' : ''}" onclick="setPracticeExamFilter('all')">全問題 (${totalAnsweredAll}/${QUESTIONS_DATA.length})</button>
       <button class="exam-pill ${AppState.practiceFilters.exam === 'CCAR-F-REV' ? 'active' : ''}" onclick="setPracticeExamFilter('CCAR-F-REV')" style="${AppState.practiceFilters.exam === 'CCAR-F-REV' ? 'background: #e53e3e; border-color: #e53e3e;' : 'border-color: #fc8181; color: #fc8181;'}">🔥 CCAR-F 弱点特訓 (${answeredRev}/${countRev}問)</button>
+      <button class="exam-pill ${AppState.practiceFilters.exam === 'CCDV-P' ? 'active' : ''}" onclick="setPracticeExamFilter('CCDV-P')" style="${AppState.practiceFilters.exam === 'CCDV-P' ? 'background: #0284c7; border-color: #0284c7;' : 'border-color: #38bdf8; color: #38bdf8;'}">🆕 CCDV-P (${answeredCCDVP}/${countCCDVP}問)</button>
+      <button class="exam-pill ${AppState.practiceFilters.exam === 'CCDV-P-SAMPLE' ? 'active' : ''}" onclick="setPracticeExamFilter('CCDV-P-SAMPLE')" style="${AppState.practiceFilters.exam === 'CCDV-P-SAMPLE' ? 'background: #0284c7; border-color: #0284c7;' : 'border-color: #38bdf8; color: #38bdf8;'}">📘 CCDV-P 公式例題 (${answeredCCDVPSample}/${countCCDVPSample}問)</button>
       <button class="exam-pill ${AppState.practiceFilters.exam === 'CCDV-F' ? 'active' : ''}" onclick="setPracticeExamFilter('CCDV-F')">CCDV-F (${answeredCCDV}/${countCCDV})</button>
       <button class="exam-pill ${AppState.practiceFilters.exam === 'CCAO-F' ? 'active' : ''}" onclick="setPracticeExamFilter('CCAO-F')">CCAO-F (${answeredCCAO}/${countCCAO})</button>
       <button class="exam-pill ${AppState.practiceFilters.exam === 'CCAR-F' ? 'active' : ''}" onclick="setPracticeExamFilter('CCAR-F')">CCAR-F (${answeredCCAR}/${countCCAR}問 ★公式6大シナリオ)</button>
@@ -1595,6 +1778,7 @@ function renderMockSetupView(container) {
 
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
       ${[
+        { code: 'CCDV-P', name: 'Developer - Professional', badge: '2026年11月新設', desc: '本番環境のClaudeシステム運用（8分野配点準拠）：高度なオーケストレーション、信頼性/RAG、分散トレース/SLI、LLM-as-judgeキャリブレーション、決定論的ガードレール、エージェントフリート運用。', time: '120分', pass: '720点' },
         { code: 'CCDV-F', name: 'Developer - Foundations', badge: '最優先推奨', desc: 'API、MCP、Tool Use、Prompt Cachingの実装問題。最も選択肢を絞りやすく合格しやすい。', time: '120分', pass: '720点' },
         { code: 'CCAO-F', name: 'Associate - Foundations', badge: '基礎固め', desc: 'プロンプト原則、AI Fluency、ハルシネーション対策、業務ワークフロー設計。', time: '120分', pass: '720点' },
         { code: 'CCAR-P', name: 'Architect - Professional', badge: '最上位・公式4大シナリオ', desc: '公式4大エンタープライズシナリオ準拠：金融マルチクラウド統合基盤・医療高リスクAIガバナンス・LLM評価MLOpsパイプライン・FinOps/PTU可観測性。', time: '120分', pass: '720点' },

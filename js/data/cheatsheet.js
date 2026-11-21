@@ -78,6 +78,7 @@ const CHEATSHEET_DATA = {
   examComparison: [
     { code: "CCAO-F", target: "非開発・PM・ビジネス", questions: "60問 / 120分", fee: "$99", pass: "720 / 1000", diff: "★3", tip: "プロンプトXML化、グラウンディング、ハルシネーション対策、Few-shot" },
     { code: "CCDV-F", target: "エンジニア・API開発", questions: "53問 / 120分", fee: "$125", pass: "720 / 1000", diff: "★2 (最易)", tip: "Messages API仕様、Prompt Caching最小トークン、Tool Use、MCP、Claude Code" },
+    { code: "CCDV-P", target: "本番運用エンジニア・SRE", questions: "70問 / 120分", fee: "$175", pass: "720 / 1000", diff: "★4 (2026.11新設)", tip: "停止理由別フォールバック、分散トレース/SLI、LLM-as-judgeキャリブレーション、決定論的ガードレール、エージェントフリート運用" },
     { code: "CCAR-F", target: "ソリューション設計者", questions: "60問 / 120分", fee: "$125", pass: "720 / 1000", diff: "★5 (最難関)", tip: "Building Effective Agents、Contextual Retrieval、長文脈配置順序、トレードオフ" },
     { code: "CCAR-P", target: "上級アーキテクト・統括", questions: "63問 / 120分", fee: "$175", pass: "720 / 1000", diff: "★4", tip: "Bedrock/Vertex統合、ZDR、RSP/ASL、LLM-as-a-Judgeバイアス排除、CoE" }
   ],
